@@ -1,0 +1,314 @@
+[
+  {
+    "id": "armor-swap-tier1",
+    "name": "Armor Swap",
+    "description": "You must swap all currently equipped armor and never use it again",
+    "imageURL": "cards/tier1/ARMOR SWAP.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "blind-tier1",
+    "name": "Blind",
+    "description": "No HUD for the next major encounter",
+    "imageURL": "cards/tier1/Blind.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "classified-tier1",
+    "name": "Classified",
+    "description": "You can no longer use class abilites",
+    "imageURL": "cards/tier1/CLASSIFIED.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "descendence-tier1",
+    "name": "Descendence",
+    "description": "You may no longer use transendence",
+    "imageURL": "cards/tier1/DESCENDENCE.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "fragmented-tier1",
+    "name": "Fragmented",
+    "description": "One fragment slot must be empty for the remainder of the challenge",
+    "imageURL": "cards/tier1/FRAGMENTED.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "grounded-tier1",
+    "name": "Grounded",
+    "description": "You must use strafe glide, strafe jump och strafe lift for the next major encounter",
+    "imageURL": "cards/tier1/GROUNDED.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "gung-ho-tier1",
+    "name": "Gung Ho",
+    "description": "You can not ADS for the rest of the dungeon/raid",
+    "imageURL": "cards/tier1/Gung Ho.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "humble-arsenal-tier1",
+    "name": "Humble Arsenal",
+    "description": "You may not use an exotic weapon for the next major encounter",
+    "imageURL": "cards/tier1/Humble Arsenal.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "laser-tag-tier1",
+    "name": "Laser Tag",
+    "description": "Remove all weapons restrictions for the next major encounter, but you must use 3 trace rifles",
+    "imageURL": "cards/tier1/LASER TAG.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "medieval-tier1",
+    "name": "Medieval",
+    "description": "Remove all weapons restrictions for the next major encounter, but you must use 3 glaives",
+    "imageURL": "cards/tier1/MEDIEVAL.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "mismatched-tier1",
+    "name": "Mismatched",
+    "description": "You can no longer utilize set bonuses",
+    "imageURL": "cards/tier1/MISMATCHED.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "rare-arsenal-tier1",
+    "name": "Rare Arsenal",
+    "description": "Use one blue weapon for the next major encounter",
+    "imageURL": "cards/tier1/RARE ARSENAL.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "skateless-tier1",
+    "name": "Skateless",
+    "description": "You may not shatterskate or wellskate",
+    "imageURL": "cards/tier1/SKATELESS.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "arsenal-swap-tier2",
+    "name": "Arsenal Swap",
+    "description": "You must swap all currently equipped weapons and never use it again",
+    "imageURL": "cards/tier2/ARSENAL SWAP.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "aspectless-tier2",
+    "name": "Aspectless",
+    "description": "You may no longer use aspects",
+    "imageURL": "cards/tier2/ASPECTLESS.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "become-legendary-i-tier2",
+    "name": "Become Legendary I",
+    "description": "You can no longer use exotic weapons",
+    "imageURL": "cards/tier2/BECOME LEGENDARY I.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "blind-forever-tier2",
+    "name": "Blind Forever",
+    "description": "You must turn off your HUD for the remainder of the challenge",
+    "imageURL": "cards/tier2/Blind Forever.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "defused-tier2",
+    "name": "Defused",
+    "description": "You can no longer use grenade ability",
+    "imageURL": "cards/tier2/DEFUSED.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "dressed-for-the-occasion-tier2",
+    "name": "Dressed for the Occasion",
+    "description": "You can not use exotic armor for the next major encounter",
+    "imageURL": "cards/tier2/DRESSED FOR THE OCCASION.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "eagerly-waiting-tier2",
+    "name": "Eagerly Waiting",
+    "description": "You may no longer use eager edge",
+    "imageURL": "cards/tier2/EAGERLY WAITING.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "empty-handed-tier2",
+    "name": "Empty Handed",
+    "description": "You can no longer use melee abilites",
+    "imageURL": "cards/tier2/EMPTY HANDED.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "master-of-none-tier2",
+    "name": "Master of None",
+    "description": "The next dungeon/raid must be completed on master difficulty",
+    "imageURL": "cards/tier2/master of none.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "monochromatic-tier2",
+    "name": "Monochromatic",
+    "description": "You may no longer use the prismatic subclass",
+    "imageURL": "cards/tier2/MONOCHROMATIC.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "plink-plonk-tier2",
+    "name": "Plink Plonk",
+    "description": "You must use at least one scout rifle",
+    "imageURL": "cards/tier2/PLINK PLONK.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "rocketless-tier2",
+    "name": "Rocketless",
+    "description": "You can no longer use rocket launchers",
+    "imageURL": "cards/tier2/ROCKETLESS.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "season-of-the-tryhard-tier2",
+    "name": "Season of the Tryhard",
+    "description": "You can no longer use artifcat mods",
+    "imageURL": "cards/tier2/SEASON OF THE TRYHARD.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "smg-less-tier2",
+    "name": "SMG-less",
+    "description": "You can no longer use SMGs",
+    "imageURL": "cards/tier2/SMG-LESS.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "snipeless-tier2",
+    "name": "Snipeless",
+    "description": "You can no longer use sniper rifles",
+    "imageURL": "cards/tier2/SNIPELESS.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "superless-tier2",
+    "name": "Superless",
+    "description": "You can no longer use super abilites",
+    "imageURL": "cards/tier2/SUPERLESS.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "enrage-tier3-dungeon",
+    "name": "Enrage",
+    "description": "You must 2-phase the next boss or wipe",
+    "imageURL": "cards/tier3/ENRAGE.png",
+    "tier": 3,
+    "type": "dungeon"
+  },
+  {
+    "id": "enrage-tier3-raid",
+    "name": "Enrage",
+    "description": "You must 1-phase the next boss or wipe",
+    "imageURL": "cards/tier3/ENRAGE.png",
+    "tier": 3,
+    "type": "raid"
+  },
+  {
+    "id": "fragmented-forever-tier3",
+    "name": "Fragmented Forever",
+    "description": "Remove all fragments for the remainder of the challenge",
+    "imageURL": "cards/tier3/FRAGMENTED FOREVER.png",
+    "tier": 3,
+    "type": "both"
+  },
+  {
+    "id": "grounded-forever-tier3",
+    "name": "Grounded Forever",
+    "description": "You may not use your jump ability for the remainder of the challenge",
+    "imageURL": "cards/tier3/GROUNDED FOREVER.png",
+    "tier": 3,
+    "type": "both"
+  },
+  {
+    "id": "marathon-mode-tier3",
+    "name": "Marathon Mode",
+    "description": "You may not spring for the remainder of the challenge",
+    "imageURL": "cards/tier3/MARATHON MODE.png",
+    "tier": 3,
+    "type": "both"
+  },
+  {
+    "id": "pyramidian-mode-tier3",
+    "name": "Pyramidian Mode",
+    "description": "Remove all ability restrictions but you may not use weapons",
+    "imageURL": "cards/tier3/PYRAMIDIAN MODE.png",
+    "tier": 3,
+    "type": "both"
+  },
+  {
+    "id": "rare-breed-tier3",
+    "name": "Rare Breed",
+    "description": "Equip blue armor in every slot",
+    "imageURL": "cards/tier3/RARE BREED.png",
+    "tier": 3,
+    "type": "both"
+  },
+  {
+    "id": "special-treatment-tier3",
+    "name": "Special Treatment",
+    "description": "You may not use special weapons",
+    "imageURL": "cards/tier3/SPECIAL TREATMENT.png",
+    "tier": 3,
+    "type": "both"
+  },
+  {
+    "id": "the-chosen-one-tier3",
+    "name": "The Chosen One",
+    "description": "One of your weapons must be travelers chosen (damaged)",
+    "imageURL": "cards/tier3/THE CHOSEN ONE.png",
+    "tier": 3,
+    "type": "both"
+  },
+  {
+    "id": "white-stallion-tier3",
+    "name": "White Stallion",
+    "description": "Equip two white weapons (common)",
+    "imageURL": "cards/tier3/WHITE STALLION.png",
+    "tier": 3,
+    "type": "both"
+  }
+]

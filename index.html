@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Förbannelsedragningen</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="void-backdrop" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <p class="sigil">✦ ✧ ✦</p>
+    <h1>Förbannelsedragningen</h1>
+    <p class="subtitle">Dra ett öde åt fireteamet innan encountern börjar.</p>
+  </header>
+
+  <main>
+
+    <div class="panel-row">
+
+      <!-- SETUP -->
+      <section class="panel" id="setup-panel">
+        <h2>1. Fireteam</h2>
+        <button type="button" id="open-player-sidebar-btn" class="btn btn-ghost">+ Lägg till spelare</button>
+        <ul id="player-list" class="chip-list" aria-label="Spelare i fireteamet"></ul>
+        <p class="empty-hint" id="player-empty-hint">Inga spelare tillagda ännu.</p>
+
+        <h2>2. Encounter</h2>
+        <div class="field-row">
+          <div class="field">
+            <span class="field-label">Typ</span>
+            <div class="segmented" id="type-segmented">
+              <button type="button" class="seg-btn is-active" data-value="raid">Raid</button>
+              <button type="button" class="seg-btn" data-value="dungeon">Dungeon</button>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Tier</span>
+            <div class="segmented" id="tier-segmented">
+              <button type="button" class="seg-btn is-active" data-value="1">I</button>
+              <button type="button" class="seg-btn" data-value="2">II</button>
+              <button type="button" class="seg-btn" data-value="3">III</button>
+            </div>
+          </div>
+        </div>
+
+        <button id="draw-btn" class="btn btn-primary btn-large">Dra förbannelser</button>
+        <p class="status-msg" id="status-msg" role="status"></p>
+      </section>
+
+      <!-- HISTORY -->
+      <section class="panel" id="history-panel">
+        <div class="history-header">
+          <h2>Historik</h2>
+          <button id="clear-history-btn" class="btn btn-danger-ghost">Rensa historik</button>
+        </div>
+        <div id="history-list" class="history-list"></div>
+        <p class="empty-hint" id="history-empty-hint">Ingen historik sparad ännu.</p>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- DRAW MODAL -->
+  <div class="modal-overlay" id="draw-modal" hidden>
+    <div class="modal-backdrop" id="draw-modal-backdrop"></div>
+    <div class="modal-box draw-modal-box" role="dialog" aria-modal="true" aria-label="Dragningen">
+      <div class="modal-header">
+        <h2>Dragningen</h2>
+        <span class="draw-progress" id="draw-progress"></span>
+        <button type="button" class="btn-icon" id="draw-modal-close-btn" aria-label="Stäng">×</button>
+      </div>
+
+      <div class="card-spread card-spread-single" id="card-spread"></div>
+
+      <button type="button" id="draw-modal-next-btn" class="btn btn-primary btn-large">Nästa</button>
+    </div>
+  </div>
+
+  <div class="sidebar-overlay" id="player-sidebar" hidden>
+    <div class="sidebar-backdrop" id="player-sidebar-backdrop"></div>
+    <aside class="sidebar-panel" aria-label="Sparade spelare">
+      <div class="sidebar-header">
+        <h2>Spelare</h2>
+        <button type="button" class="btn-icon" id="close-player-sidebar-btn" aria-label="Stäng">×</button>
+      </div>
+
+      <form id="add-known-player-form" class="player-form">
+        <input type="text" id="known-player-input" placeholder="Nytt spelarnamn" autocomplete="off" required />
+        <button type="submit" class="btn btn-primary">Spara</button>
+      </form>
+
+      <p class="sidebar-hint">Sparade spelare läggs automatiskt till i fireteamet. Klicka en rad för att lägga till den igen senare.</p>
+
+      <ul id="known-player-list" class="known-player-list" aria-label="Sparade spelare"></ul>
+      <p class="empty-hint" id="known-player-empty-hint">Inga sparade spelare ännu.</p>
+    </aside>
+  </div>
+
+  <div class="confirm-overlay" id="confirm-overlay" hidden>
+    <div class="confirm-box">
+      <p>Rensa all sparad historik? Detta kan inte ångras.</p>
+      <div class="confirm-actions">
+        <button class="btn btn-ghost" id="confirm-cancel">Avbryt</button>
+        <button class="btn btn-danger" id="confirm-clear">Rensa allt</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

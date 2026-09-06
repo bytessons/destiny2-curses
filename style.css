@@ -1,0 +1,626 @@
+:root {
+  --void: #14101c;
+  --void-deep: #0d0a13;
+  --panel: #1f1830;
+  --panel-line: #362a4d;
+  --bone: #e9e3d3;
+  --bone-dim: #a89ec2;
+  --crimson: #9c2b3c;
+  --crimson-bright: #c4394d;
+  --amber: #c9992e;
+  --violet: #6a4c9c;
+
+  --font-display: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  --font-body: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--void);
+  color: var(--bone);
+  font-family: var(--font-body);
+}
+
+body {
+  position: relative;
+  padding: 3rem 1.25rem 5rem;
+  overflow-x: hidden;
+}
+
+.void-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(106, 76, 156, 0.25), transparent 60%),
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(156, 43, 60, 0.12), transparent 65%),
+    var(--void-deep);
+}
+
+.site-header {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 2.5rem;
+}
+
+.sigil {
+  letter-spacing: 0.6em;
+  color: var(--amber);
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem;
+  padding-left: 0.6em; /* optical centering for the trailing letter-spacing */
+}
+
+.site-header h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2rem, 5vw, 2.9rem);
+  margin: 0 0 0.5rem;
+  color: var(--bone);
+}
+
+.subtitle {
+  color: var(--bone-dim);
+  margin: 0;
+  font-size: 1.02rem;
+}
+
+main {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.panel-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.75rem;
+  align-items: start;
+}
+
+@media (max-width: 800px) {
+  .panel-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  padding: 1.75rem;
+  position: relative;
+}
+
+/* ornate corner ticks instead of a rounded card default */
+.panel::before, .panel::after {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--amber);
+  opacity: 0.7;
+}
+.panel::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+.panel::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+
+.panel h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.2rem;
+  margin: 0 0 0.9rem;
+  color: var(--bone);
+}
+
+.panel h2:not(:first-child) {
+  margin-top: 1.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--panel-line);
+}
+
+/* Player input */
+.player-form {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+}
+
+.player-form input {
+  flex: 1;
+  background: var(--void-deep);
+  border: 1px solid var(--panel-line);
+  color: var(--bone);
+  padding: 0.65rem 0.8rem;
+  font-size: 0.95rem;
+  font-family: var(--font-body);
+}
+.player-form input:focus {
+  outline: 2px solid var(--amber);
+  outline-offset: 1px;
+}
+
+.chip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chip-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--void-deep);
+  border: 1px solid var(--panel-line);
+  padding: 0.4rem 0.5rem 0.4rem 0.8rem;
+  font-size: 0.92rem;
+}
+
+.chip-remove {
+  background: none;
+  border: none;
+  color: var(--bone-dim);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.2rem 0.35rem;
+}
+.chip-remove:hover { color: var(--crimson-bright); }
+
+.empty-hint {
+  color: var(--bone-dim);
+  font-size: 0.9rem;
+  font-style: italic;
+  margin: 0.4rem 0 0;
+}
+
+/* Setup fields */
+.field-row {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--bone-dim);
+  margin-bottom: 0.4rem;
+}
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--panel-line);
+}
+
+.seg-btn {
+  background: var(--void-deep);
+  color: var(--bone-dim);
+  border: none;
+  border-right: 1px solid var(--panel-line);
+  padding: 0.5rem 0.9rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.seg-btn:last-child { border-right: none; }
+.seg-btn:hover { color: var(--bone); }
+.seg-btn.is-active {
+  background: var(--violet);
+  color: var(--bone);
+}
+
+/* Buttons */
+.btn {
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid var(--panel-line);
+  background: var(--void-deep);
+  color: var(--bone);
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--amber); }
+
+.btn-primary {
+  background: var(--crimson);
+  border-color: var(--crimson);
+  color: var(--bone);
+}
+.btn-primary:hover { background: var(--crimson-bright); border-color: var(--crimson-bright); }
+
+.btn-large {
+  display: block;
+  width: 100%;
+  padding: 0.85rem;
+  font-size: 1.02rem;
+  margin-top: 0.4rem;
+}
+
+.btn-ghost { background: transparent; }
+
+.btn-danger-ghost {
+  background: transparent;
+  border-color: var(--panel-line);
+  color: var(--crimson-bright);
+  font-size: 0.85rem;
+  padding: 0.4rem 0.75rem;
+}
+.btn-danger-ghost:hover { border-color: var(--crimson-bright); }
+
+.btn-danger {
+  background: var(--crimson);
+  border-color: var(--crimson);
+}
+.btn-danger:hover { background: var(--crimson-bright); }
+
+.status-msg {
+  min-height: 1.4em;
+  margin: 0.7rem 0 0;
+  font-size: 0.9rem;
+  color: var(--amber);
+}
+.status-msg.is-error { color: var(--crimson-bright); }
+
+/* Result cards */
+.card-spread {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.card-spread-single {
+  grid-template-columns: 1fr;
+  max-width: 380px;
+  margin: 0 auto 1.25rem;
+}
+
+.curse-card {
+  background: var(--void-deep);
+  border: 1px solid var(--panel-line);
+  padding: 0.9rem 0.9rem 1.1rem;
+}
+
+/* Slot-machine spin: the card node stays mounted for the whole spin (only
+   its image/text swap underneath), so a single continuous pulse plays
+   instead of restarting a keyframe on every tick — that restart was what
+   read as blinking. */
+.curse-card.is-spinning {
+  animation: spin-pulse 0.4s ease-in-out infinite;
+}
+
+@keyframes spin-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.82; transform: scale(0.985); }
+}
+
+.curse-card.is-landed {
+  animation: settle 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.4) forwards;
+}
+
+@keyframes settle {
+  0% { opacity: 0.85; transform: scale(0.96); }
+  60% { opacity: 1; transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .curse-card.is-spinning,
+  .curse-card.is-landed {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.curse-card img {
+  width: 100%;
+  display: block;
+  border: 1px solid var(--panel-line);
+  margin-bottom: 0.6rem;
+}
+
+.curse-card .player-name {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--amber);
+  margin: 0 0 0.35rem;
+}
+
+.curse-card .curse-name {
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+  font-size: 1.15rem;
+}
+
+.curse-card .curse-desc {
+  font-size: 1.05rem;
+  color: var(--bone);
+  margin: 0 0 0.6rem;
+  line-height: 1.55;
+  text-align: left;
+  background: var(--panel);
+  border-left: 3px solid var(--amber);
+  padding: 0.7rem 0.9rem;
+}
+
+.tier-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--amber);
+  color: var(--amber);
+}
+
+/* History */
+.history-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+.history-header h2 { margin: 0; }
+
+.history-entry {
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--panel-line);
+}
+.history-entry:first-child { border-top: none; }
+
+.history-entry .player-name {
+  font-family: var(--font-display);
+  color: var(--amber);
+  margin: 0 0 0.4rem;
+}
+
+.history-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.history-tag {
+  position: relative;
+  font-size: 0.82rem;
+  color: var(--bone-dim);
+  border: 1px solid var(--panel-line);
+  padding: 0.2rem 0.55rem;
+  cursor: help;
+}
+
+.history-tag[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%) translateY(4px);
+  width: max-content;
+  max-width: 220px;
+  background: var(--void-deep);
+  color: var(--bone);
+  border: 1px solid var(--amber);
+  padding: 0.5rem 0.65rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  text-align: left;
+  z-index: 15;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.history-tag[data-tooltip]:hover::after,
+.history-tag[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Player sidebar */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sidebar-overlay[hidden] { display: none; }
+
+.sidebar-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 10, 19, 0.75);
+}
+
+.sidebar-panel {
+  position: relative;
+  width: min(360px, 100%);
+  height: 100%;
+  background: var(--panel);
+  border-left: 1px solid var(--panel-line);
+  padding: 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: slide-in 0.25s ease forwards;
+}
+
+@keyframes slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-panel { animation: none; }
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+.sidebar-header h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.2rem;
+  margin: 0;
+  color: var(--bone);
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  color: var(--bone-dim);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.1rem 0.4rem;
+}
+.btn-icon:hover { color: var(--crimson-bright); }
+
+.sidebar-hint {
+  color: var(--bone-dim);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin: 0 0 1rem;
+}
+
+.known-player-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.known-player-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--void-deep);
+  border: 1px solid var(--panel-line);
+  padding: 0.5rem 0.5rem 0.5rem 0.8rem;
+}
+
+.known-player-list .known-player-name {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--bone);
+  font-size: 0.92rem;
+  text-align: left;
+  cursor: pointer;
+  padding: 0.2rem 0;
+}
+.known-player-list .known-player-name:hover { color: var(--amber); }
+
+/* Draw modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal-overlay[hidden] {
+  display: none;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 10, 19, 0.85);
+}
+
+.modal-box {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  padding: 1.5rem;
+  max-width: 560px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  opacity: 0;
+  transform: translateY(10px);
+  animation: modal-reveal 0.25s ease forwards;
+}
+
+@keyframes modal-reveal {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-box { animation: none; }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
+}
+.modal-header h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.2rem;
+  margin: 0;
+  color: var(--bone);
+}
+
+.draw-progress {
+  margin-left: auto;
+  color: var(--bone-dim);
+  font-size: 0.85rem;
+}
+
+/* Confirm overlay */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 10, 19, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 10;
+}
+
+/* [hidden] must win over the explicit display:flex above, or the
+   overlay stays visible even when the attribute is set. */
+.confirm-overlay[hidden] {
+  display: none;
+}
+
+.confirm-box {
+  background: var(--panel);
+  border: 1px solid var(--crimson);
+  padding: 1.5rem;
+  max-width: 380px;
+  text-align: center;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1.2rem;
+}
+
+@media (max-width: 480px) {
+  .field-row { gap: 1rem; }
+  .panel { padding: 1.25rem; }
+}
