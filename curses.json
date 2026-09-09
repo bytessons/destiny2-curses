@@ -104,6 +104,38 @@
     "type": "both"
   },
   {
+    "id": "equipment-locked-tier1",
+    "name": "Equipment Locked",
+    "description": "You may no longer change anything in your loadout unless specified by another card",
+    "imageURL": "cards/tier1/LOCKED_LOADOUT.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "tier-up-tier1",
+    "name": "Tier Up",
+    "description": "Jump up one tier and draw another card",
+    "imageURL": "cards/tier1/TIER_UP.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "tier-up-ii-tier1",
+    "name": "Tier Up II",
+    "description": "Jump up one tier and draw another card",
+    "imageURL": "cards/tier1/TIER_UP_2.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "tier-up-iii-tier1",
+    "name": "Tier Up III",
+    "description": "Jump up one tier and draw another card",
+    "imageURL": "cards/tier1/TIER_UP_3.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
     "id": "arsenal-swap-tier2",
     "name": "Arsenal Swap",
     "description": "You must swap all currently equipped weapons and never use it again",
@@ -229,6 +261,38 @@
     "description": "You can no longer use super abilites",
     "imageURL": "cards/tier2/SUPERLESS.png",
     "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "equipment-locked-tier2",
+    "name": "Equipment Locked",
+    "description": "You may no longer change anything in your loadout unless specified by another card",
+    "imageURL": "cards/tier2/LOCKED_LOADOUT.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "tier-up-ii-tier2",
+    "name": "Tier Up II",
+    "description": "Jump up one tier and draw another card",
+    "imageURL": "cards/tier2/TIER_UP_2.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "tier-up-iii-tier2",
+    "name": "Tier Up III",
+    "description": "Jump up one tier and draw another card",
+    "imageURL": "cards/tier2/TIER_UP_3.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "equipment-locked-tier3",
+    "name": "Equipment Locked",
+    "description": "You may no longer change anything in your loadout unless specified by another card",
+    "imageURL": "cards/tier3/LOCKED_LOADOUT.png",
+    "tier": 3,
     "type": "both"
   },
   {
