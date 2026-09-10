@@ -18,6 +18,37 @@
 
   <main>
 
+    <!-- SHARED LOBBY (revealed by lobby.js only when Firebase is configured) -->
+    <section class="panel" id="lobby-panel" hidden>
+      <h2>Delad lobby</h2>
+
+      <div id="lobby-idle" hidden>
+        <p class="lobby-hint">
+          Kör solo lokalt, eller skapa en lobby så flera enheter ser samma
+          dragning. Gästerna skriver bara in koden.
+        </p>
+        <div class="lobby-actions">
+          <button type="button" id="lobby-create-btn" class="btn btn-primary">Skapa lobby</button>
+          <form id="lobby-join-form" class="lobby-join">
+            <input type="text" id="lobby-code-input" maxlength="6" placeholder="KOD"
+                   autocomplete="off" aria-label="Lobbykod" inputmode="latin" />
+            <button type="submit" class="btn">Gå med</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="lobby-active" hidden>
+        <p class="lobby-code-line">
+          Lobbykod: <strong id="lobby-code-value" class="lobby-code"></strong>
+          <button type="button" id="lobby-copy-btn" class="btn btn-ghost">Kopiera</button>
+        </p>
+        <p class="lobby-hint" id="lobby-role"></p>
+        <button type="button" id="lobby-leave-btn" class="btn btn-danger-ghost">Lämna lobby</button>
+      </div>
+
+      <p class="status-msg" id="lobby-status" role="status"></p>
+    </section>
+
     <div class="panel-row">
 
       <!-- SETUP -->
@@ -111,5 +142,6 @@
   </div>
 
   <script src="script.js"></script>
+  <script type="module" src="lobby.js"></script>
 </body>
 </html>

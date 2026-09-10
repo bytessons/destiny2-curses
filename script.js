@@ -5,6 +5,21 @@
   const PLAYERS_STORAGE_KEY = "destinyKnownPlayers:v1";
   const CURRENT_PLAYERS_STORAGE_KEY = "destinyCurrentPlayers:v1";
 
+  // When true, incoming lobby state is being applied to the UI — suppress the
+  // change events we'd otherwise emit back to the lobby (which would echo).
+  let applyingRemoteState = false;
+
+  // Set to true by lobby.js when this device is a guest in a shared lobby.
+  // Guests don't drive setup or the draw; the host does.
+  let lockedByLobby = false;
+
+  function emitLocalChange() {
+    if (applyingRemoteState) return;
+    document.dispatchEvent(new CustomEvent("curse:localchange", {
+      detail: { players: players.slice(), type: selectedType, tier: selectedTier },
+    }));
+  }
+
   /** @type {Array<{id:string,name:string,description:string,imageURL:string,tier:number,type:string}>} */
   let ALL_CURSES = [];
 
@@ -22,6 +37,7 @@
   let currentDrawIndex = 0;
 
   // ---------- DOM ----------
+  const setupPanel = document.getElementById("setup-panel");
   const playerListEl = document.getElementById("player-list");
   const playerEmptyHint = document.getElementById("player-empty-hint");
 
@@ -136,6 +152,7 @@
         players = players.filter((p) => p !== name);
         saveCurrentPlayers();
         renderPlayers();
+        emitLocalChange();
       });
       li.appendChild(span);
       li.appendChild(btn);
@@ -153,6 +170,7 @@
     saveCurrentPlayers();
     setStatus("");
     renderPlayers();
+    emitLocalChange();
   }
 
   // ---------- Known players (persisted separately from curse history) ----------
@@ -228,11 +246,19 @@
     });
   }
 
-  wireSegmented(typeSegmented, (value) => { selectedType = value; });
-  wireSegmented(tierSegmented, (value) => { selectedTier = Number(value); });
+  wireSegmented(typeSegmented, (value) => { selectedType = value; emitLocalChange(); });
+  wireSegmented(tierSegmented, (value) => { selectedTier = Number(value); emitLocalChange(); });
+
+  // Reflects a segmented control's active button without firing its onSelect —
+  // used when applying lobby state pushed by the host.
+  function setSegmentedValue(container, value) {
+    container.querySelectorAll(".seg-btn").forEach((b) => {
+      b.classList.toggle("is-active", b.dataset.value === String(value));
+    });
+  }
 
   // ---------- Draw logic ----------
-  function getEligiblePool(history) {
+  function getEligiblePool() {
     return ALL_CURSES.filter((curse) => {
       const matchesTier = curse.tier === selectedTier;
       const matchesType = curse.type === selectedType || curse.type === "both";
@@ -240,60 +266,107 @@
     });
   }
 
-  function drawForFireteam() {
-    setStatus("");
-
+  // Runs the whole draw: validates, builds an assignment, and returns either
+  // { assignment } or { error } — without touching storage or the UI, so the
+  // lobby host can call it and then broadcast the result.
+  function computeAssignment() {
     if (players.length === 0) {
-      setStatus("Lägg till minst en spelare innan ni drar.", true);
-      return;
+      return { error: "Lägg till minst en spelare innan ni drar." };
     }
 
     const history = loadHistory();
-    const pool = getEligiblePool(history);
+    const pool = getEligiblePool();
 
-    // A curse being off-limits for one player (because they already have
-    // it) shouldn't remove it from the pool for everyone else — only the
-    // per-player history matters. The only cross-player rule is that the
-    // same curse can't be handed to two players in the same draw.
     const playersOutOfCurses = players.filter((name) => {
       const held = new Set(history[name] || []);
       return !pool.some((c) => !held.has(c.id));
     });
 
     if (playersOutOfCurses.length > 0) {
-      setStatus(
-        playersOutOfCurses.join(", ") +
-        " har redan fått alla tier " + toRoman(selectedTier) + " (" + typeLabel(selectedType) +
-        ") förbannelser som finns. Rensa historik för " +
-        (playersOutOfCurses.length === 1 ? "den spelaren" : "de spelarna") +
-        " eller lägg till fler curses i curses.json.",
-        true
-      );
-      return;
+      return {
+        error:
+          playersOutOfCurses.join(", ") +
+          " har redan fått alla tier " + toRoman(selectedTier) + " (" + typeLabel(selectedType) +
+          ") förbannelser som finns. Rensa historik för " +
+          (playersOutOfCurses.length === 1 ? "den spelaren" : "de spelarna") +
+          " eller lägg till fler curses i curses.json.",
+      };
     }
 
     const assignment = assignDistinctCurses(players, pool, history);
 
     if (!assignment) {
-      setStatus(
-        "Kunde inte hitta en fördelning där ingen förbannelse delas ut till två spelare i " +
-        "samma dragning för tier " + toRoman(selectedTier) + " (" + typeLabel(selectedType) + "). " +
-        "Rensa historik eller lägg till fler curses i curses.json.",
-        true
-      );
-      return;
+      return {
+        error:
+          "Kunde inte hitta en fördelning där ingen förbannelse delas ut till två spelare i " +
+          "samma dragning för tier " + toRoman(selectedTier) + " (" + typeLabel(selectedType) + "). " +
+          "Rensa historik eller lägg till fler curses i curses.json.",
+      };
     }
 
-    // Persist
+    return { assignment };
+  }
+
+  // Persists an assignment to local history and opens the reveal modal. Used
+  // both by the local draw and when a lobby guest receives the host's result.
+  function finalizeDraw(assignment) {
+    const history = loadHistory();
     assignment.forEach(({ player, curse }) => {
       if (!history[player]) history[player] = [];
-      history[player].push(curse.id);
+      if (!history[player].includes(curse.id)) history[player].push(curse.id);
     });
     saveHistory(history);
-
     renderHistory();
     openDrawModal(assignment);
   }
+
+  // Rebuilds an assignment from the compact { player, curseId } form stored in
+  // the lobby doc. Unknown ids (curses.json out of sync between devices) are
+  // dropped rather than crashing the reveal.
+  function showRemoteDraw(rawAssignments) {
+    const assignment = (rawAssignments || [])
+      .map((a) => {
+        const curse = ALL_CURSES.find((c) => c.id === a.curseId);
+        return curse ? { player: a.player, curse } : null;
+      })
+      .filter(Boolean);
+
+    if (assignment.length === 0) {
+      setStatus("Fick en dragning från lobbyn men känner inte igen förbannelserna (curses.json ur synk?).", true);
+      return;
+    }
+    finalizeDraw(assignment);
+  }
+
+  function drawForFireteam() {
+    setStatus("");
+
+    if (lockedByLobby) {
+      setStatus("Bara värden i lobbyn kan dra.", true);
+      return;
+    }
+
+    const result = computeAssignment();
+    if (result.error) {
+      setStatus(result.error, true);
+      return;
+    }
+
+    finalizeDraw(result.assignment);
+
+    // Let the lobby (if any, and if we're the host) broadcast the result.
+    document.dispatchEvent(new CustomEvent("curse:localdraw", {
+      detail: {
+        assignment: result.assignment.map(({ player, curse }) => ({ player, curseId: curse.id })),
+      },
+    }));
+  }
+
+  // A curse being off-limits for one player (because they already have it)
+  // shouldn't remove it from the pool for everyone else — only the per-player
+  // history matters. The only cross-player rule is that the same curse can't be
+  // handed to two players in the same draw. That logic lives in computeAssignment
+  // and assignDistinctCurses.
 
   // Finds one curse per player, no curse repeated within the draw, and no
   // player getting a curse they've already held — a bipartite matching,
@@ -540,6 +613,55 @@
 
   drawBtn.addEventListener("click", drawForFireteam);
 
+  // ---------- Lobby bridge ----------
+  // lobby.js (an ES module, loaded separately) talks to the app only through
+  // window.CurseApp and the "curse:localchange" / "curse:localdraw" events.
+  // If firebase-config.js has no values, lobby.js does nothing and the app
+  // stays a purely local, localStorage-backed tool.
+
+  const drawBtnDefaultText = drawBtn.textContent;
+
+  function applyRemoteState(state) {
+    applyingRemoteState = true;
+    try {
+      if (Array.isArray(state.players)) {
+        players = state.players.slice();
+        saveCurrentPlayers();
+        renderPlayers();
+      }
+      if (state.type === "raid" || state.type === "dungeon") {
+        selectedType = state.type;
+        setSegmentedValue(typeSegmented, state.type);
+      }
+      if (state.tier >= 1 && state.tier <= 4) {
+        selectedTier = Number(state.tier);
+        setSegmentedValue(tierSegmented, state.tier);
+      }
+    } finally {
+      applyingRemoteState = false;
+    }
+  }
+
+  // Guests can't touch setup or draw — the host owns both.
+  function setLobbyLocked(locked) {
+    lockedByLobby = Boolean(locked);
+    setupPanel.classList.toggle("is-lobby-locked", lockedByLobby);
+    openPlayerSidebarBtn.disabled = lockedByLobby;
+    drawBtn.disabled = lockedByLobby;
+    drawBtn.textContent = lockedByLobby ? "Väntar på värdens dragning…" : drawBtnDefaultText;
+  }
+
+  let resolveReady;
+  const readyPromise = new Promise((resolve) => { resolveReady = resolve; });
+
+  window.CurseApp = {
+    ready: readyPromise,
+    getState: () => ({ players: players.slice(), type: selectedType, tier: selectedTier }),
+    applyRemoteState,
+    setLobbyLocked,
+    showRemoteDraw,
+  };
+
   // ---------- Boot ----------
   async function init() {
     try {
@@ -561,6 +683,7 @@
     renderPlayers();
     renderKnownPlayers();
     renderHistory();
+    resolveReady(ALL_CURSES);
   }
 
   init();

@@ -1,0 +1,59 @@
+rules_version = '2';
+
+// Security Rules för Förbannelsedragningens delade lobbies.
+//
+// Modellen är "lobbykod = delad nyckel": det finns ingen inloggning, så vem som
+// helst som känner till en 6-teckenskod kan läsa och skriva just den lobbyn.
+// Det vi FÖRHINDRAR här är:
+//   * att någon listar/scannar fram alla lobbies  -> allow list: if false
+//   * att dokument får fel form eller skräpfält    -> isValidShape()
+//   * att createdAt/hostId skrivs om i efterhand   -> jämförs mot resource.data
+//   * att gamla lobbies ligger kvar för evigt      -> allow delete efter 24h
+//
+// Reglerna körs gratis även på Spark-planen.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /lobbies/{code} {
+
+      // Enskild läsning på känd kod är ok. Att lista kollektionen är det inte —
+      // annars kan vem som helst hämta alla pågående lobbies.
+      allow get: if true;
+      allow list: if false;
+
+      allow create: if code.matches('[A-Z0-9]{6}')
+        && isValidShape(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.draw == null;
+
+      allow update: if isValidShape(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.hostId == resource.data.hostId
+        && request.resource.data.updatedAt == request.time;
+
+      // Vem som helst får städa bort en lobby som är äldre än ett dygn.
+      allow delete: if request.time > resource.data.createdAt + duration.value(24, 'h');
+    }
+
+    function isValidShape(d) {
+      return d.keys().hasOnly(['createdAt', 'updatedAt', 'hostId', 'type', 'tier', 'players', 'draw'])
+        && d.keys().hasAll(['createdAt', 'updatedAt', 'hostId', 'type', 'tier', 'players'])
+        && d.hostId is string && d.hostId.size() >= 8 && d.hostId.size() <= 64
+        && d.type in ['raid', 'dungeon']
+        && d.tier is int && d.tier >= 1 && d.tier <= 4
+        && d.players is list && d.players.size() <= 12
+        && (!('draw' in d.keys()) || d.draw == null || isValidDraw(d.draw));
+    }
+
+    // Firestore-regler kan inte iterera listelement, så vi validerar formen på
+    // draw-objektet och storleken — inte varje enskild assignment.
+    function isValidDraw(draw) {
+      return draw.keys().hasOnly(['drawnAt', 'assignments'])
+        && draw.drawnAt is number
+        && draw.assignments is list
+        && draw.assignments.size() <= 12;
+    }
+  }
+}

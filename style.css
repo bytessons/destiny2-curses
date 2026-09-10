@@ -624,3 +624,64 @@ main {
   .field-row { gap: 1rem; }
   .panel { padding: 1.25rem; }
 }
+
+/* Shared lobby */
+#lobby-panel[hidden] { display: none; }
+
+.lobby-hint {
+  color: var(--bone-dim);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin: 0 0 1rem;
+}
+
+.lobby-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.lobby-join {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.lobby-join input {
+  background: var(--void-deep);
+  border: 1px solid var(--panel-line);
+  color: var(--bone);
+  padding: 0.6rem 0.7rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  width: 7ch;
+}
+.lobby-join input:focus { outline: 2px solid var(--amber); outline-offset: 1px; }
+
+.lobby-code-line {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+  color: var(--bone-dim);
+}
+
+.lobby-code {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  letter-spacing: 0.28em;
+  color: var(--amber);
+  padding-left: 0.28em;
+}
+
+/* Guest lock — the host owns setup and the draw */
+#setup-panel.is-lobby-locked .segmented,
+#setup-panel.is-lobby-locked .chip-remove {
+  pointer-events: none;
+  opacity: 0.5;
+}
+#setup-panel.is-lobby-locked::after { border-color: var(--crimson); }
