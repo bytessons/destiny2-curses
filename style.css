@@ -635,6 +635,25 @@ main {
   margin: 0 0 1rem;
 }
 
+.lobby-name-field {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--bone-dim);
+  margin-bottom: 0.9rem;
+}
+.lobby-name-field input {
+  display: block;
+  margin-top: 0.35rem;
+  width: min(260px, 100%);
+  background: var(--void-deep);
+  border: 1px solid var(--panel-line);
+  color: var(--bone);
+  padding: 0.6rem 0.7rem;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+}
+.lobby-name-field input:focus { outline: 2px solid var(--amber); outline-offset: 1px; }
+
 .lobby-actions {
   display: flex;
   flex-wrap: wrap;
@@ -678,10 +697,24 @@ main {
   padding-left: 0.28em;
 }
 
-/* Guest lock — the host owns setup and the draw */
-#setup-panel.is-lobby-locked .segmented,
-#setup-panel.is-lobby-locked .chip-remove {
+/* In a lobby the roster is self-service (players add themselves by joining),
+   so nobody edits it from the setup panel. Guests also can't touch type/tier. */
+#setup-panel.is-lobby-host .chip-remove,
+#setup-panel.is-lobby-guest .chip-remove,
+#setup-panel.is-lobby-guest .segmented {
   pointer-events: none;
   opacity: 0.5;
 }
-#setup-panel.is-lobby-locked::after { border-color: var(--crimson); }
+#setup-panel.is-lobby-guest::after { border-color: var(--crimson); }
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* History — your own row first, marked */
+.history-entry.is-self {
+  border-left: 3px solid var(--amber);
+  padding-left: 0.7rem;
+  margin-left: -0.7rem;
+}

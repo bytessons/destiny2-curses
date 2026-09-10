@@ -25,8 +25,13 @@
       <div id="lobby-idle" hidden>
         <p class="lobby-hint">
           Kör solo lokalt, eller skapa en lobby så flera enheter ser samma
-          dragning. Gästerna skriver bara in koden.
+          dragning. Skapar du lobbyn styr du typ, tier och dragningen — spelarna
+          lägger till sig själva genom att gå med.
         </p>
+        <label class="lobby-name-field">
+          Ditt spelarnamn
+          <input type="text" id="lobby-name-input" maxlength="24" placeholder="Namn" autocomplete="off" />
+        </label>
         <div class="lobby-actions">
           <button type="button" id="lobby-create-btn" class="btn btn-primary">Skapa lobby</button>
           <form id="lobby-join-form" class="lobby-join">
@@ -43,6 +48,7 @@
           <button type="button" id="lobby-copy-btn" class="btn btn-ghost">Kopiera</button>
         </p>
         <p class="lobby-hint" id="lobby-role"></p>
+        <p class="lobby-hint" id="lobby-roster"></p>
         <button type="button" id="lobby-leave-btn" class="btn btn-danger-ghost">Lämna lobby</button>
       </div>
 

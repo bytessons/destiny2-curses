@@ -52,13 +52,15 @@ förändras.
 
 **Så funkar det:**
 
-- Den som klickar "Skapa lobby" blir **värd**. Bara värden styr fireteam, typ och
-  tier och kör dragningen.
-- Övriga skriver in den 6 tecken långa koden, får ett låst UI och ser värdens
-  setup och dragning i realtid.
+- Alla anger ett **spelarnamn**. Den som klickar "Skapa lobby" blir **värd** och
+  styr typ, tier och dragningen.
+- Övriga skriver in namn + den 6 tecken långa koden och läggs då till i
+  fireteamet automatiskt. Deras setup-UI är låst; de ser värdens val och
+  dragningen i realtid.
+- I historiken hamnar din egen rad överst, märkt "(du)".
 - Historik sparas fortfarande lokalt per webbläsare (`localStorage`) — lobbyn delar
   bara den aktuella dragningen, inte historiken.
-- Lobbies får rensas av vem som helst efter 24 timmar (se reglerna).
+- Värden stänger lobbyn när hen lämnar. Gäster som lämnar tas bara bort ur rostern.
 
 Webb-konfigurationen i `firebase-config.js` är inte hemlig; det är
 `firestore.rules` och App Check som skyddar datan.

@@ -13,6 +13,9 @@
   // Guests don't drive setup or the draw; the host does.
   let lockedByLobby = false;
 
+  // The name this device joined a lobby as (null outside lobby mode).
+  let selfPlayerName = null;
+
   function emitLocalChange() {
     if (applyingRemoteState) return;
     document.dispatchEvent(new CustomEvent("curse:localchange", {
@@ -566,16 +569,26 @@
     const history = loadHistory();
     const names = Object.keys(history).filter((n) => history[n] && history[n].length > 0);
 
+    // Own name first (lobby mode), the rest keep insertion order.
+    if (selfPlayerName) {
+      names.sort((a, b) => {
+        if (a === selfPlayerName) return -1;
+        if (b === selfPlayerName) return 1;
+        return 0;
+      });
+    }
+
     historyList.innerHTML = "";
     historyEmptyHint.hidden = names.length > 0;
 
     names.forEach((name) => {
+      const isSelf = name === selfPlayerName;
       const entry = document.createElement("div");
-      entry.className = "history-entry";
+      entry.className = isSelf ? "history-entry is-self" : "history-entry";
 
       const title = document.createElement("p");
       title.className = "player-name";
-      title.textContent = name;
+      title.textContent = isSelf ? name + " (du)" : name;
       entry.appendChild(title);
 
       const tags = document.createElement("div");
@@ -642,13 +655,29 @@
     }
   }
 
-  // Guests can't touch setup or draw — the host owns both.
-  function setLobbyLocked(locked) {
-    lockedByLobby = Boolean(locked);
-    setupPanel.classList.toggle("is-lobby-locked", lockedByLobby);
-    openPlayerSidebarBtn.disabled = lockedByLobby;
-    drawBtn.disabled = lockedByLobby;
-    drawBtn.textContent = lockedByLobby ? "Väntar på värdens dragning…" : drawBtnDefaultText;
+  // Lobby roles:
+  //   null    — not in a lobby, everything editable (local mode)
+  //   "host"  — owns type/tier/draw; the roster is self-service (guests add
+  //             themselves), so the "add player" UI is locked
+  //   "guest" — watches only; the whole setup panel and the draw are locked
+  function setLobbyRole(role) {
+    const isGuest = role === "guest";
+    const isHost = role === "host";
+    lockedByLobby = isGuest;
+
+    setupPanel.classList.toggle("is-lobby-guest", isGuest);
+    setupPanel.classList.toggle("is-lobby-host", isHost);
+
+    openPlayerSidebarBtn.disabled = isGuest || isHost;
+    drawBtn.disabled = isGuest;
+    drawBtn.textContent = isGuest ? "Väntar på värdens dragning…" : drawBtnDefaultText;
+  }
+
+  // The player name this device joined the lobby as — sorted to the top of the
+  // history list so everyone sees their own curses first.
+  function setSelfName(name) {
+    selfPlayerName = name || null;
+    renderHistory();
   }
 
   let resolveReady;
@@ -658,7 +687,8 @@
     ready: readyPromise,
     getState: () => ({ players: players.slice(), type: selectedType, tier: selectedTier }),
     applyRemoteState,
-    setLobbyLocked,
+    setLobbyRole,
+    setSelfName,
     showRemoteDraw,
   };
 

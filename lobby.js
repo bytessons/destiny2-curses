@@ -4,9 +4,11 @@
 // och två DOM-events ("curse:localchange", "curse:localdraw"). Finns ingen ifylld
 // firebase-config.js gör den här filen ingenting — appen kör vidare lokalt.
 //
-// Rollmodell (se CLAUDE.md): den som skapar lobbyn är VÄRD och är den enda som
-// styr setup och kör dragningen. Övriga enheter är gäster — deras UI låses och
-// de speglar bara det värden skickar, plus att de får se dragningen live.
+// Rollmodell (se CLAUDE.md): den som skapar lobbyn är VÄRD och styr typ, tier
+// och dragningen. Alla — värd som gäster — går med under ett spelarnamn och blir
+// då en spelare i fireteamet (`players` i lobbydokumentet). Gästernas setup-UI
+// är låst; de speglar värdens val och ser dragningen live. Värden ser rostern
+// fyllas på när folk går med.
 
 import { firebaseConfig, recaptchaV3SiteKey } from "./firebase-config.js";
 
@@ -28,7 +30,8 @@ if (!firebaseConfig || !firebaseConfig.projectId || !firebaseConfig.apiKey) {
 async function boot() {
   const { initializeApp } = await import(`${SDK}/firebase-app.js`);
   const {
-    getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, serverTimestamp,
+    getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot,
+    serverTimestamp, arrayUnion, arrayRemove,
   } = await import(`${SDK}/firebase-firestore.js`);
 
   const app = initializeApp(firebaseConfig);
@@ -55,10 +58,12 @@ async function boot() {
     active: document.getElementById("lobby-active"),
     createBtn: document.getElementById("lobby-create-btn"),
     joinForm: document.getElementById("lobby-join-form"),
+    nameInput: document.getElementById("lobby-name-input"),
     codeInput: document.getElementById("lobby-code-input"),
     codeValue: document.getElementById("lobby-code-value"),
     copyBtn: document.getElementById("lobby-copy-btn"),
     role: document.getElementById("lobby-role"),
+    roster: document.getElementById("lobby-roster"),
     leaveBtn: document.getElementById("lobby-leave-btn"),
     status: document.getElementById("lobby-status"),
   };
@@ -69,7 +74,9 @@ async function boot() {
   // ---------- State ----------
   let code = null;
   let isHost = false;
+  let myName = null; // spelarnamnet vi gick med som
   let unsub = null;
+  let roster = []; // senast kända players[] från lobbydokumentet
   let lastSeenDrawnAt = 0;
   let ignoreNextDrawnAt = 0; // dragningen vi själva just publicerade
   let setupTimer = null;
@@ -91,13 +98,27 @@ async function boot() {
     if (inLobby && el.codeValue) el.codeValue.textContent = code;
     if (el.role) {
       el.role.textContent = isHost
-        ? "Du är värd — du styr setup och drar åt hela laget."
-        : "Du är gäst — värden styr. Du ser dragningen live.";
+        ? "Du är värd — du styr typ, tier och dragningen."
+        : "Du är gäst — värden styr setup. Du ser dragningen live.";
     }
+    if (el.roster) {
+      el.roster.textContent = roster.length
+        ? "I lobbyn: " + roster.join(", ")
+        : "Väntar på att spelare går med…";
+    }
+  }
+
+  function readName() {
+    return (el.nameInput ? el.nameInput.value : "").trim().slice(0, 24);
   }
 
   // ---------- Skapa / gå med / lämna ----------
   async function createLobby() {
+    const name = readName();
+    if (!name) {
+      setStatus("Skriv ditt spelarnamn först.", true);
+      return;
+    }
     setStatus("Skapar lobby…");
     const state = window.CurseApp.getState();
 
@@ -112,22 +133,23 @@ async function boot() {
         hostId: clientId,
         type: state.type,
         tier: state.tier,
-        players: state.players,
+        players: [name],
         draw: null,
       });
 
-      code = candidate;
-      isHost = true;
-      lastSeenDrawnAt = 0;
-      subscribe();
-      renderPanel();
-      setStatus("Lobby skapad. Dela koden " + code + " med laget.");
+      enterLobby(candidate, true, name);
+      setStatus("Lobby skapad. Dela koden " + candidate + " med laget.");
       return;
     }
     setStatus("Kunde inte hitta en ledig lobbykod, försök igen.", true);
   }
 
   async function joinLobby(rawCode) {
+    const name = readName();
+    if (!name) {
+      setStatus("Skriv ditt spelarnamn först.", true);
+      return;
+    }
     const candidate = String(rawCode || "").trim().toUpperCase();
     if (!/^[A-Z0-9]{6}$/.test(candidate)) {
       setStatus("En lobbykod är 6 tecken (A–Z, 0–9).", true);
@@ -140,24 +162,66 @@ async function boot() {
       return;
     }
 
-    code = candidate;
-    isHost = snap.data().hostId === clientId;
-    lastSeenDrawnAt = 0; // så att en redan gjord dragning visas när man kommer in
+    const host = snap.data().hostId === clientId;
+    enterLobby(candidate, host, name);
     applyDoc(snap.data());
-    subscribe();
-    renderPanel();
-    window.CurseApp.setLobbyLocked(!isHost);
-    setStatus(isHost ? "Återansluten som värd." : "Ansluten till " + code + ".");
+
+    // Lägg till dig själv i rostern (om du inte redan står där).
+    try {
+      await updateDoc(lobbyRef(candidate), {
+        players: arrayUnion(name),
+        updatedAt: serverTimestamp(),
+      });
+      setStatus("Ansluten till " + candidate + " som " + name + ".");
+    } catch (err) {
+      console.error("[lobby] Kunde inte lägga till spelaren:", err);
+      setStatus("Anslöt men kunde inte lägga till namnet i rostern.", true);
+    }
   }
 
-  function leaveLobby() {
+  function enterLobby(newCode, host, name) {
+    code = newCode;
+    isHost = host;
+    myName = name;
+    lastSeenDrawnAt = 0; // så att en redan gjord dragning visas när man kommer in
+    ignoreNextDrawnAt = 0;
+    subscribe();
+    window.CurseApp.setLobbyRole(host ? "host" : "guest");
+    window.CurseApp.setSelfName(name);
+    renderPanel();
+  }
+
+  function teardownLocal(message) {
     if (unsub) { unsub(); unsub = null; }
     if (setupTimer) { clearTimeout(setupTimer); setupTimer = null; }
     code = null;
     isHost = false;
-    window.CurseApp.setLobbyLocked(false);
+    myName = null;
+    roster = [];
+    window.CurseApp.setLobbyRole(null);
+    window.CurseApp.setSelfName(null);
     renderPanel();
+    if (message) setStatus(message, true);
+  }
+
+  async function leaveLobby() {
+    const wasHost = isHost;
+    const name = myName;
+    const ref = code ? lobbyRef(code) : null;
+    teardownLocal();
     setStatus("Du lämnade lobbyn.");
+
+    if (!ref) return;
+    try {
+      if (wasHost) {
+        // Värden stänger lobbyn när hen går.
+        await deleteDoc(ref);
+      } else if (name) {
+        await updateDoc(ref, { players: arrayRemove(name), updatedAt: serverTimestamp() });
+      }
+    } catch (err) {
+      console.warn("[lobby] Städning vid utgång misslyckades (ofarligt):", err);
+    }
   }
 
   // ---------- Firestore -> app ----------
@@ -165,8 +229,7 @@ async function boot() {
     if (unsub) unsub();
     unsub = onSnapshot(lobbyRef(code), (snap) => {
       if (!snap.exists()) {
-        setStatus("Lobbyn finns inte längre.", true);
-        leaveLobby();
+        teardownLocal("Lobbyn stängdes.");
         return;
       }
       applyDoc(snap.data());
@@ -177,14 +240,16 @@ async function boot() {
   }
 
   function applyDoc(data) {
-    if (!isHost) {
-      window.CurseApp.applyRemoteState({
-        players: data.players,
-        type: data.type,
-        tier: data.tier,
-      });
-      window.CurseApp.setLobbyLocked(true);
+    roster = Array.isArray(data.players) ? data.players.slice() : [];
+
+    // Alla speglar rostern (för att se vilka som är med). Gäster speglar även
+    // typ/tier. Värden äger typ/tier och rör dem inte här.
+    if (isHost) {
+      window.CurseApp.applyRemoteState({ players: roster });
+    } else {
+      window.CurseApp.applyRemoteState({ players: roster, type: data.type, tier: data.tier });
     }
+    renderPanel();
 
     const draw = data.draw;
     if (draw && typeof draw.drawnAt === "number" && draw.drawnAt > lastSeenDrawnAt) {
@@ -196,13 +261,15 @@ async function boot() {
   }
 
   // ---------- App -> Firestore (bara värden) ----------
+  // Värden synkar bara typ och tier. Rostern (`players`) sköts av spelarna
+  // själva via arrayUnion/arrayRemove när de går med/lämnar.
   document.addEventListener("curse:localchange", (e) => {
     if (!code || !isHost) return;
     if (setupTimer) clearTimeout(setupTimer);
     const state = e.detail;
     setupTimer = setTimeout(() => {
+      setupTimer = null;
       updateDoc(lobbyRef(code), {
-        players: state.players,
         type: state.type,
         tier: state.tier,
         updatedAt: serverTimestamp(),

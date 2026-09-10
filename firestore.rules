@@ -33,8 +33,11 @@ service cloud.firestore {
         && request.resource.data.hostId == resource.data.hostId
         && request.resource.data.updatedAt == request.time;
 
-      // Vem som helst får städa bort en lobby som är äldre än ett dygn.
-      allow delete: if request.time > resource.data.createdAt + duration.value(24, 'h');
+      // Samma modell som skrivningar: koden är en delad nyckel, så vem som helst
+      // som känner till den får ta bort lobbyn. Värden gör det när hen lämnar;
+      // en städ-funktion kan göra det för övergivna lobbies. Utan `list`-access
+      // går det ändå inte att massradera utan att gissa koder.
+      allow delete: if true;
     }
 
     function isValidShape(d) {
