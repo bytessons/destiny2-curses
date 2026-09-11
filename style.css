@@ -122,22 +122,6 @@ main {
   border-top: 1px solid var(--panel-line);
 }
 
-/* #fireteam-section/#encounter-section wrap their own <h2>, so it's always
-   ":first-child" of its own wrapper — style the divider off the wrapper's
-   position instead, and drop it when the section above is hidden (lobby
-   mode hides #fireteam-section, so #encounter-section becomes the first
-   thing shown and shouldn't have a leading divider). */
-#setup-panel > #encounter-section > h2 {
-  margin-top: 1.75rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--panel-line);
-}
-#fireteam-section[hidden] + #encounter-section > h2 {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
-}
-
 /* Player input */
 .player-form {
   display: flex;
@@ -196,41 +180,11 @@ main {
   margin: 0.4rem 0 0;
 }
 
-/* Setup fields */
-.field-row {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 1.5rem;
-}
-
 .field-label {
   display: block;
   font-size: 0.82rem;
   color: var(--bone-dim);
   margin-bottom: 0.4rem;
-}
-
-.segmented {
-  display: inline-flex;
-  border: 1px solid var(--panel-line);
-}
-
-.seg-btn {
-  background: var(--void-deep);
-  color: var(--bone-dim);
-  border: none;
-  border-right: 1px solid var(--panel-line);
-  padding: 0.5rem 0.9rem;
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-.seg-btn:last-child { border-right: none; }
-.seg-btn:hover { color: var(--bone); }
-.seg-btn.is-active {
-  background: var(--violet);
-  color: var(--bone);
 }
 
 /* Buttons */
@@ -637,7 +591,6 @@ main {
 }
 
 @media (max-width: 480px) {
-  .field-row { gap: 1rem; }
   .panel { padding: 1.25rem; }
 }
 
@@ -713,10 +666,10 @@ main {
   padding-left: 0.28em;
 }
 
-/* In a lobby, #fireteam-section/#encounter-section are hidden outright by
-   script.js (setLobbyRole) rather than just disabled — the lobby panel's
-   roster list is the source of truth. A crimson accent still marks a guest's
-   setup panel as "watching only". */
+/* In a lobby, #fireteam-section is hidden outright by script.js
+   (setLobbyRole) rather than just disabled — the lobby panel's roster list
+   is the source of truth. A crimson accent still marks a guest's setup
+   panel as "watching only". */
 #setup-panel.is-lobby-guest::after { border-color: var(--crimson); }
 
 .lobby-roster-block { margin-bottom: 1.1rem; }

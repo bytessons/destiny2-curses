@@ -26,7 +26,8 @@ service cloud.firestore {
         && isValidShape(request.resource.data)
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time
-        && request.resource.data.draw == null;
+        && request.resource.data.draw == null
+        && request.resource.data.playerTiers == {};
 
       allow update: if isValidShape(request.resource.data)
         && request.resource.data.createdAt == resource.data.createdAt
@@ -41,11 +42,11 @@ service cloud.firestore {
     }
 
     function isValidShape(d) {
-      return d.keys().hasOnly(['createdAt', 'updatedAt', 'hostId', 'tier', 'players', 'draw'])
-        && d.keys().hasAll(['createdAt', 'updatedAt', 'hostId', 'tier', 'players'])
+      return d.keys().hasOnly(['createdAt', 'updatedAt', 'hostId', 'players', 'playerTiers', 'draw'])
+        && d.keys().hasAll(['createdAt', 'updatedAt', 'hostId', 'players', 'playerTiers'])
         && d.hostId is string && d.hostId.size() >= 8 && d.hostId.size() <= 64
-        && d.tier is int && d.tier >= 1 && d.tier <= 4
         && d.players is list && d.players.size() <= 12
+        && d.playerTiers is map && d.playerTiers.size() <= 12
         && (!('draw' in d.keys()) || d.draw == null || isValidDraw(d.draw));
     }
 

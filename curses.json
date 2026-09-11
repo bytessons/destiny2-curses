@@ -121,7 +121,7 @@
   },
   {
     "id": "tier-up-ii-tier1",
-    "name": "Tier Up II",
+    "name": "Tier Up",
     "description": "Jump up one tier and draw another card",
     "imageURL": "cards/tier1/TIER_UP_2.png",
     "tier": 1,
@@ -129,7 +129,7 @@
   },
   {
     "id": "tier-up-iii-tier1",
-    "name": "Tier Up III",
+    "name": "Tier Up",
     "description": "Jump up one tier and draw another card",
     "imageURL": "cards/tier1/TIER_UP_3.png",
     "tier": 1,
@@ -297,7 +297,7 @@
   },
   {
     "id": "tier-up-ii-tier2",
-    "name": "Tier Up II",
+    "name": "Tier Up",
     "description": "Jump up one tier and draw another card",
     "imageURL": "cards/tier2/TIER_UP_2.png",
     "tier": 2,
@@ -305,7 +305,7 @@
   },
   {
     "id": "tier-up-iii-tier2",
-    "name": "Tier Up III",
+    "name": "Tier Up",
     "description": "Jump up one tier and draw another card",
     "imageURL": "cards/tier2/TIER_UP_3.png",
     "tier": 2,

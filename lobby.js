@@ -1,14 +1,16 @@
 // Delad lobby via Firestore.
 //
 // Fristående ES-modul. Pratar med resten av appen bara genom window.CurseApp
-// och två DOM-events ("curse:localchange", "curse:localdraw"). Finns ingen ifylld
+// och DOM-eventet "curse:localdraw". Finns ingen ifylld
 // firebase-config.js gör den här filen ingenting — appen kör vidare lokalt.
 //
-// Rollmodell (se CLAUDE.md): den som skapar lobbyn är VÄRD och styr tier
-// och dragningen. Alla — värd som gäster — går med under ett spelarnamn och blir
-// då en spelare i fireteamet (`players` i lobbydokumentet). Gästernas setup-UI
-// är låst; de speglar värdens val och ser dragningen live. Värden ser rostern
-// fyllas på när folk går med.
+// Rollmodell (se CLAUDE.md): den som skapar lobbyn är VÄRD och styr
+// dragningen. Alla — värd som gäster — går med under ett spelarnamn och blir
+// då en spelare i fireteamet (`players` i lobbydokumentet). Alla spelare
+// börjar på tier 1; per-spelare-tier (`playerTiers` i lobbydokumentet) stiger
+// bara genom "Tier Up"-kort och skrivs enbart av värden efter varje
+// dragning. Gästernas setup-UI är låst; de speglar rostern och tiers och ser
+// dragningen live.
 
 import { firebaseConfig, recaptchaV3SiteKey } from "./firebase-config.js";
 
@@ -17,7 +19,6 @@ const CLIENT_ID_KEY = "destinyLobbyClientId:v1";
 const LAST_LOBBY_KEY = "destinyLastLobby:v1";
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // inga lättförväxlade tecken
 const CODE_LENGTH = 6;
-const SETUP_DEBOUNCE_MS = 400;
 const CREATE_RETRIES = 5;
 
 if (!firebaseConfig || !firebaseConfig.projectId || !firebaseConfig.apiKey) {
@@ -81,10 +82,10 @@ async function boot() {
   let myName = null; // spelarnamnet vi gick med som
   let unsub = null;
   let roster = []; // senast kända players[] från lobbydokumentet
+  let playerTiers = {}; // senast kända playerTiers från lobbydokumentet
   let previousRoster = null; // null = "väntar på första snapshotten", undviker en falsk join-toast för alla som redan var med
   let lastSeenDrawnAt = 0;
   let ignoreNextDrawnAt = 0; // dragningen vi själva just publicerade
-  let setupTimer = null;
 
   function lobbyRef(c) {
     return doc(db, "lobbies", c);
@@ -103,8 +104,8 @@ async function boot() {
     if (inLobby && el.codeValue) el.codeValue.textContent = code;
     if (el.role) {
       el.role.textContent = isHost
-        ? "Du är värd — du styr tier och dragningen."
-        : "Du är gäst — värden styr setup. Du ser dragningen live.";
+        ? "Du är värd — du kör dragningen."
+        : "Du är gäst — värden kör dragningen. Du ser den live.";
     }
     renderRoster();
   }
@@ -115,7 +116,9 @@ async function boot() {
     roster.forEach((name) => {
       const li = document.createElement("li");
       const span = document.createElement("span");
-      span.textContent = name === myName ? name + " (du)" : name;
+      const tier = playerTiers[name] || 1;
+      const label = tier > 1 ? name + " (Tier " + tier + ")" : name;
+      span.textContent = name === myName ? label + " (du)" : label;
       li.appendChild(span);
       el.rosterList.appendChild(li);
     });
@@ -148,7 +151,6 @@ async function boot() {
       return;
     }
     setStatus("Skapar lobby…");
-    const state = window.CurseApp.getState();
 
     for (let attempt = 0; attempt < CREATE_RETRIES; attempt++) {
       const candidate = randomCode();
@@ -159,8 +161,8 @@ async function boot() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         hostId: clientId,
-        tier: state.tier,
         players: [name],
+        playerTiers: {},
         draw: null,
       });
 
@@ -223,11 +225,11 @@ async function boot() {
 
   function teardownLocal(message) {
     if (unsub) { unsub(); unsub = null; }
-    if (setupTimer) { clearTimeout(setupTimer); setupTimer = null; }
     code = null;
     isHost = false;
     myName = null;
     roster = [];
+    playerTiers = {};
     previousRoster = null;
     window.CurseApp.setLobbyRole(null);
     window.CurseApp.setSelfName(null);
@@ -286,14 +288,12 @@ async function boot() {
       newcomers.forEach((name) => showToast(name + " gick med i lobbyn"));
     }
     previousRoster = roster.slice();
+    playerTiers = (data.playerTiers && typeof data.playerTiers === "object") ? data.playerTiers : {};
 
-    // Alla speglar rostern (för att se vilka som är med). Gäster speglar även
-    // tier. Värden äger tier och rör den inte här.
-    if (isHost) {
-      window.CurseApp.applyRemoteState({ players: roster });
-    } else {
-      window.CurseApp.applyRemoteState({ players: roster, tier: data.tier });
-    }
+    // Alla speglar rostern och tiers, host som gäst — playerTiers skrivs bara
+    // av värden efter en dragning, aldrig redigerat direkt, så det finns
+    // inget lokalt att skriva över genom att alltid applicera det här.
+    window.CurseApp.applyRemoteState({ players: roster, playerTiers });
     renderPanel();
 
     const draw = data.draw;
@@ -306,30 +306,17 @@ async function boot() {
   }
 
   // ---------- App -> Firestore (bara värden) ----------
-  // Värden synkar bara tier. Rostern (`players`) sköts av spelarna
-  // själva via arrayUnion/arrayRemove när de går med/lämnar.
-  document.addEventListener("curse:localchange", (e) => {
-    if (!code || !isHost) return;
-    if (setupTimer) clearTimeout(setupTimer);
-    const state = e.detail;
-    setupTimer = setTimeout(() => {
-      setupTimer = null;
-      updateDoc(lobbyRef(code), {
-        tier: state.tier,
-        updatedAt: serverTimestamp(),
-      }).catch((err) => {
-        console.error("[lobby] Kunde inte skriva setup:", err);
-        setStatus("Kunde inte synka setup till lobbyn.", true);
-      });
-    }, SETUP_DEBOUNCE_MS);
-  });
-
+  // Rostern (`players`) sköts av spelarna själva via arrayUnion/arrayRemove
+  // när de går med/lämnar. playerTiers finns bara med här eftersom en
+  // dragning kan bumpa en spelares tier (Tier Up-kort) — skrivs atomiskt
+  // tillsammans med draw-fältet så ingen enhet hinner se det ena utan det andra.
   document.addEventListener("curse:localdraw", (e) => {
     if (!code || !isHost) return;
     const drawnAt = Date.now();
     ignoreNextDrawnAt = drawnAt;
     updateDoc(lobbyRef(code), {
       draw: { drawnAt, assignments: e.detail.assignment },
+      playerTiers: e.detail.playerTiers || {},
       updatedAt: serverTimestamp(),
     }).catch((err) => {
       console.error("[lobby] Kunde inte skriva dragning:", err);

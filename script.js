@@ -4,15 +4,16 @@
   const STORAGE_KEY = "destinyCurseHistory:v1";
   const PLAYERS_STORAGE_KEY = "destinyKnownPlayers:v1";
   const CURRENT_PLAYERS_STORAGE_KEY = "destinyCurrentPlayers:v1";
+  // Per-player tier for the CURRENT lobby/session only — never mixed into
+  // destinyCurseHistory:v1, and reset whenever the fireteam is cleared or a
+  // player leaves it. Rises only when a player draws a "Tier Up" card; there
+  // is no shared/host-picked tier anymore, everyone starts at 1.
+  const SESSION_TIER_STORAGE_KEY = "destinySessionPlayerTier:v1";
   // Per-lobby subset of history, keyed by lobby code — { code: { name: [curseId,...] } }.
   // Only affects what the history panel *shows* while in a lobby; the
   // never-repeat exclusion in computeAssignment always reads the full
   // cross-lobby history in STORAGE_KEY. See loadLobbyLog/recordLobbyDraw.
   const LOBBY_LOG_KEY = "destinyLobbyCurseLog:v1";
-
-  // When true, incoming lobby state is being applied to the UI — suppress the
-  // change events we'd otherwise emit back to the lobby (which would echo).
-  let applyingRemoteState = false;
 
   // Set to true by lobby.js when this device is a guest in a shared lobby.
   // Guests don't drive setup or the draw; the host does.
@@ -25,13 +26,6 @@
   // when set, the history panel shows only curses drawn in this lobby.
   let currentLobbyCode = null;
 
-  function emitLocalChange() {
-    if (applyingRemoteState) return;
-    document.dispatchEvent(new CustomEvent("curse:localchange", {
-      detail: { players: players.slice(), tier: selectedTier },
-    }));
-  }
-
   /** @type {Array<{id:string,name:string,description:string,imageURL:string,tier:number,type:string}>} */
   let ALL_CURSES = [];
 
@@ -41,7 +35,8 @@
   /** @type {string[]} */
   let knownPlayers = [];
 
-  let selectedTier = 1;
+  /** @type {Record<string, number>} name -> current tier (session-scoped) */
+  let playerTiers = {};
 
   /** @type {Array<{player:string,curse:object}>} */
   let currentDrawAssignment = [];
@@ -61,8 +56,6 @@
   const knownPlayerInput = document.getElementById("known-player-input");
   const knownPlayerListEl = document.getElementById("known-player-list");
   const knownPlayerEmptyHint = document.getElementById("known-player-empty-hint");
-
-  const tierSegmented = document.getElementById("tier-segmented");
 
   const drawBtn = document.getElementById("draw-btn");
   const statusMsg = document.getElementById("status-msg");
@@ -84,7 +77,6 @@
   const confirmClear = document.getElementById("confirm-clear");
 
   const fireteamSection = document.getElementById("fireteam-section");
-  const encounterSection = document.getElementById("encounter-section");
 
   // ---------- Storage ----------
   function loadHistory() {
@@ -177,6 +169,38 @@
     }
   }
 
+  function loadPlayerTiers() {
+    try {
+      const raw = localStorage.getItem(SESSION_TIER_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (err) {
+      console.error("Kunde inte läsa spelar-tiers från localStorage:", err);
+      return {};
+    }
+  }
+
+  function savePlayerTiers() {
+    try {
+      localStorage.setItem(SESSION_TIER_STORAGE_KEY, JSON.stringify(playerTiers));
+    } catch (err) {
+      console.error("Kunde inte spara spelar-tiers till localStorage:", err);
+    }
+  }
+
+  function getPlayerTier(name) {
+    return playerTiers[name] || 1;
+  }
+
+  function setPlayerTier(name, tier) {
+    playerTiers[name] = tier;
+    savePlayerTiers();
+  }
+
+  function forgetPlayerTier(name) {
+    delete playerTiers[name];
+    savePlayerTiers();
+  }
+
   // ---------- Status ----------
   function setStatus(message, isError) {
     statusMsg.textContent = message || "";
@@ -189,7 +213,8 @@
     players.forEach((name) => {
       const li = document.createElement("li");
       const span = document.createElement("span");
-      span.textContent = name;
+      const tier = getPlayerTier(name);
+      span.textContent = tier > 1 ? name + " (Tier " + toRoman(tier) + ")" : name;
       const btn = document.createElement("button");
       btn.className = "chip-remove";
       btn.type = "button";
@@ -198,8 +223,8 @@
       btn.addEventListener("click", () => {
         players = players.filter((p) => p !== name);
         saveCurrentPlayers();
+        forgetPlayerTier(name);
         renderPlayers();
-        emitLocalChange();
       });
       li.appendChild(span);
       li.appendChild(btn);
@@ -213,7 +238,9 @@
   // own local fireteam, so it shouldn't linger after the lobby is gone.
   function clearFireteam() {
     players = [];
+    playerTiers = {};
     saveCurrentPlayers();
+    savePlayerTiers();
     renderPlayers();
   }
 
@@ -226,7 +253,6 @@
     saveCurrentPlayers();
     setStatus("");
     renderPlayers();
-    emitLocalChange();
   }
 
   // ---------- Known players (persisted separately from curse history) ----------
@@ -291,45 +317,36 @@
     if (e.key === "Escape" && !playerSidebar.hidden) closePlayerSidebar();
   });
 
-  // ---------- Segmented controls ----------
-  function wireSegmented(container, onSelect) {
-    container.addEventListener("click", (e) => {
-      const btn = e.target.closest(".seg-btn");
-      if (!btn) return;
-      container.querySelectorAll(".seg-btn").forEach((b) => b.classList.remove("is-active"));
-      btn.classList.add("is-active");
-      onSelect(btn.dataset.value);
-    });
-  }
-
-  wireSegmented(tierSegmented, (value) => { selectedTier = Number(value); emitLocalChange(); });
-
-  // Reflects a segmented control's active button without firing its onSelect —
-  // used when applying lobby state pushed by the host.
-  function setSegmentedValue(container, value) {
-    container.querySelectorAll(".seg-btn").forEach((b) => {
-      b.classList.toggle("is-active", b.dataset.value === String(value));
-    });
-  }
-
   // ---------- Draw logic ----------
-  function getEligiblePool() {
-    return ALL_CURSES.filter((curse) => curse.tier === selectedTier);
+  // There is no shared/host-picked tier anymore — every player starts at
+  // tier 1, and only rises (permanently, for the session) by drawing a
+  // "Tier Up" card. Detected by id prefix since the display name is just
+  // "Tier Up" for every variant (see curses.json / CLAUDE.md).
+  const MAX_TIER = 4;
+
+  function getPoolForTier(tier) {
+    return ALL_CURSES.filter((curse) => curse.tier === tier);
   }
 
-  // Runs the whole draw: validates, builds an assignment, and returns either
-  // { assignment } or { error } — without touching storage or the UI, so the
-  // lobby host can call it and then broadcast the result.
+  function isTierUpCurse(curse) {
+    return curse.id.startsWith("tier-up");
+  }
+
+  // Runs the whole draw: validates, builds an assignment (expanding any
+  // "Tier Up" chains into extra cards for that player), and returns either
+  // { assignment, tierUps } or { error } — without touching storage or the
+  // UI, so the lobby host can call it and then broadcast the result.
   function computeAssignment() {
     if (players.length === 0) {
       return { error: "Lägg till minst en spelare innan ni drar." };
     }
 
     const history = loadHistory();
-    const pool = getEligiblePool();
+    const tiers = players.map((name) => getPlayerTier(name));
 
-    const playersOutOfCurses = players.filter((name) => {
+    const playersOutOfCurses = players.filter((name, i) => {
       const held = new Set(history[name] || []);
+      const pool = getPoolForTier(tiers[i]);
       return !pool.some((c) => !held.has(c.id));
     });
 
@@ -337,30 +354,51 @@
       return {
         error:
           playersOutOfCurses.join(", ") +
-          " har redan fått alla tier " + toRoman(selectedTier) +
-          " förbannelser som finns. Rensa historik för " +
+          " har redan fått alla förbannelser som finns på sin tier. Rensa historik för " +
           (playersOutOfCurses.length === 1 ? "den spelaren" : "de spelarna") +
           " eller lägg till fler curses i curses.json.",
       };
     }
 
-    const assignment = assignDistinctCurses(players, pool, history);
+    const base = assignDistinctCurses(players, tiers, history);
 
-    if (!assignment) {
+    if (!base) {
       return {
         error:
           "Kunde inte hitta en fördelning där ingen förbannelse delas ut till två spelare i " +
-          "samma dragning för tier " + toRoman(selectedTier) + ". " +
-          "Rensa historik eller lägg till fler curses i curses.json.",
+          "samma dragning. Rensa historik eller lägg till fler curses i curses.json.",
       };
     }
 
-    return { assignment };
+    const usedCurseIds = new Set(base.map((entry) => entry.curse.id));
+    const assignment = base.slice();
+    const tierUps = [];
+
+    players.forEach((name, i) => {
+      let tier = tiers[i];
+      let entry = base[i];
+      while (isTierUpCurse(entry.curse) && tier < MAX_TIER) {
+        tier += 1;
+        tierUps.push({ player: name, newTier: tier });
+
+        const held = new Set(history[name] || []);
+        const options = getPoolForTier(tier).filter((c) => !held.has(c.id) && !usedCurseIds.has(c.id));
+        if (options.length === 0) break; // pool exhausted at the new tier — keep the bump, stop the chain
+
+        const extra = shuffle(options)[0];
+        usedCurseIds.add(extra.id);
+        entry = { player: name, curse: extra };
+        assignment.push(entry);
+      }
+    });
+
+    return { assignment, tierUps };
   }
 
-  // Persists an assignment to local history and opens the reveal modal. Used
-  // both by the local draw and when a lobby guest receives the host's result.
-  function finalizeDraw(assignment) {
+  // Persists an assignment to local history, applies any tier bumps, and
+  // opens the reveal modal. Used both by the local draw and when a lobby
+  // guest receives the host's result.
+  function finalizeDraw(assignment, tierUps) {
     const history = loadHistory();
     assignment.forEach(({ player, curse }) => {
       if (!history[player]) history[player] = [];
@@ -368,6 +406,8 @@
     });
     saveHistory(history);
     recordLobbyDraw(assignment);
+    (tierUps || []).forEach(({ player, newTier }) => setPlayerTier(player, newTier));
+    renderPlayers();
     renderHistory();
     openDrawModal(assignment);
   }
@@ -387,7 +427,9 @@
       setStatus("Fick en dragning från lobbyn men känner inte igen förbannelserna (curses.json ur synk?).", true);
       return;
     }
-    finalizeDraw(assignment);
+    // Tier bumps for guests arrive via the lobby doc's playerTiers field
+    // (applyRemoteState), not recomputed locally — pass none here.
+    finalizeDraw(assignment, []);
   }
 
   function drawForFireteam() {
@@ -404,12 +446,13 @@
       return;
     }
 
-    finalizeDraw(result.assignment);
+    finalizeDraw(result.assignment, result.tierUps);
 
     // Let the lobby (if any, and if we're the host) broadcast the result.
     document.dispatchEvent(new CustomEvent("curse:localdraw", {
       detail: {
         assignment: result.assignment.map(({ player, curse }) => ({ player, curseId: curse.id })),
+        playerTiers: Object.assign({}, playerTiers),
       },
     }));
   }
@@ -420,13 +463,14 @@
   // handed to two players in the same draw. That logic lives in computeAssignment
   // and assignDistinctCurses.
 
-  // Finds one curse per player, no curse repeated within the draw, and no
-  // player getting a curse they've already held — a bipartite matching,
-  // solved with backtracking (small enough pools that this is instant).
-  function assignDistinctCurses(playerNames, pool, history) {
-    const options = playerNames.map((name) => {
+  // Finds one curse per player (each from their own tier's pool), no curse
+  // repeated within the draw, and no player getting a curse they've already
+  // held — a bipartite matching, solved with backtracking (small enough
+  // pools that this is instant).
+  function assignDistinctCurses(playerNames, tiers, history) {
+    const options = playerNames.map((name, i) => {
       const held = new Set(history[name] || []);
-      return shuffle(pool.filter((c) => !held.has(c.id)));
+      return shuffle(getPoolForTier(tiers[i]).filter((c) => !held.has(c.id)));
     });
 
     // Most-constrained-first ordering makes backtracking fail fast instead
@@ -748,35 +792,33 @@
 
   // ---------- Lobby bridge ----------
   // lobby.js (an ES module, loaded separately) talks to the app only through
-  // window.CurseApp and the "curse:localchange" / "curse:localdraw" events.
+  // window.CurseApp and the "curse:localdraw" event.
   // If firebase-config.js has no values, lobby.js does nothing and the app
   // stays a purely local, localStorage-backed tool.
 
   const drawBtnDefaultText = drawBtn.textContent;
 
+  // players/playerTiers come from the lobby doc — always applied, host and
+  // guest alike, since neither edits playerTiers directly (it's derived only
+  // from draws) and there's no local edit here to clobber.
   function applyRemoteState(state) {
-    applyingRemoteState = true;
-    try {
-      if (Array.isArray(state.players)) {
-        players = state.players.slice();
-        saveCurrentPlayers();
-        renderPlayers();
-      }
-      if (state.tier >= 1 && state.tier <= 4) {
-        selectedTier = Number(state.tier);
-        setSegmentedValue(tierSegmented, state.tier);
-      }
-    } finally {
-      applyingRemoteState = false;
+    if (Array.isArray(state.players)) {
+      players = state.players.slice();
+      saveCurrentPlayers();
     }
+    if (state.playerTiers && typeof state.playerTiers === "object") {
+      playerTiers = Object.assign({}, state.playerTiers);
+      savePlayerTiers();
+    }
+    renderPlayers();
   }
 
   // Lobby roles:
   //   null    — not in a lobby, everything editable (local mode)
-  //   "host"  — owns tier/draw; the roster is self-service (guests add
+  //   "host"  — owns the draw; the roster is self-service (guests add
   //             themselves), so the fireteam section is hidden entirely —
   //             the lobby panel's roster list is the source of truth
-  //   "guest" — watches only; fireteam AND tier are hidden, leaving just the
+  //   "guest" — watches only; fireteam is hidden, leaving just the
   //             (disabled) draw button as a status line
   function setLobbyRole(role) {
     const isGuest = role === "guest";
@@ -788,7 +830,6 @@
     setupPanel.classList.toggle("is-lobby-host", isHost);
 
     if (fireteamSection) fireteamSection.hidden = inLobby;
-    if (encounterSection) encounterSection.hidden = isGuest;
 
     openPlayerSidebarBtn.disabled = isGuest || isHost;
     drawBtn.disabled = isGuest;
@@ -814,7 +855,7 @@
 
   window.CurseApp = {
     ready: readyPromise,
-    getState: () => ({ players: players.slice(), tier: selectedTier }),
+    getState: () => ({ players: players.slice(), playerTiers: Object.assign({}, playerTiers) }),
     applyRemoteState,
     setLobbyRole,
     setSelfName,
@@ -842,6 +883,7 @@
     }
     knownPlayers = loadKnownPlayers();
     players = loadCurrentPlayers();
+    playerTiers = loadPlayerTiers();
     renderPlayers();
     renderKnownPlayers();
     renderHistory();

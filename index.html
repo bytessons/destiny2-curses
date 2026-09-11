@@ -25,8 +25,9 @@
       <div id="lobby-idle" hidden>
         <p class="lobby-hint">
           Kör solo lokalt, eller skapa en lobby så flera enheter ser samma
-          dragning. Skapar du lobbyn styr du tier och dragningen — spelarna
-          lägger till sig själva genom att gå med.
+          dragning. Skapar du lobbyn kör du dragningen — spelarna lägger
+          till sig själva genom att gå med. Alla börjar på tier I; ett
+          "Tier Up"-kort flyttar bara upp den spelaren.
         </p>
         <label class="lobby-name-field">
           Ditt spelarnamn
@@ -73,20 +74,6 @@
           <button type="button" id="open-player-sidebar-btn" class="btn btn-ghost">+ Lägg till spelare</button>
           <ul id="player-list" class="chip-list" aria-label="Spelare i fireteamet"></ul>
           <p class="empty-hint" id="player-empty-hint">Inga spelare tillagda ännu.</p>
-        </div>
-
-        <div id="encounter-section">
-          <h2>Encounter</h2>
-          <div class="field-row">
-            <div class="field">
-              <span class="field-label">Tier</span>
-              <div class="segmented" id="tier-segmented">
-                <button type="button" class="seg-btn is-active" data-value="1">I</button>
-                <button type="button" class="seg-btn" data-value="2">II</button>
-                <button type="button" class="seg-btn" data-value="3">III</button>
-              </div>
-            </div>
-          </div>
         </div>
 
         <button id="draw-btn" class="btn btn-primary btn-large">Dra förbannelser</button>
