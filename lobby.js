@@ -216,6 +216,7 @@ async function boot() {
     subscribe();
     window.CurseApp.setLobbyRole(host ? "host" : "guest");
     window.CurseApp.setSelfName(name);
+    window.CurseApp.setLobbyCode(newCode);
     saveLastLobby(newCode, name);
     renderPanel();
   }
@@ -230,6 +231,7 @@ async function boot() {
     previousRoster = null;
     window.CurseApp.setLobbyRole(null);
     window.CurseApp.setSelfName(null);
+    window.CurseApp.setLobbyCode(null);
     window.CurseApp.clearFireteam();
     if (el.codeInput) el.codeInput.value = "";
     if (el.nameInput) el.nameInput.value = "";

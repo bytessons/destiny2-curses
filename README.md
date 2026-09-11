@@ -64,6 +64,11 @@ förändras.
   rensar det sparade läget och fireteam-listan helt.
 - Historik sparas fortfarande lokalt per webbläsare (`localStorage`) — lobbyn delar
   bara den aktuella dragningen, inte historiken.
+- Historik-panelen visar bara curses dragna **i den här lobbyn** medan du är i
+  en — annars kan det se förvirrande ut om samma spelarnamn använts i en
+  tidigare, orelaterad lobby. Ingen curse kan ändå någonsin delas ut två
+  gånger till samma spelare på samma enhet; det är bara vad som *visas* som
+  är begränsat till lobbyn.
 - Värden stänger lobbyn när hen lämnar. Gäster som lämnar tas bara bort ur rostern.
 
 Webb-konfigurationen i `firebase-config.js` är inte hemlig; det är

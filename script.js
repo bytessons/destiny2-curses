@@ -4,6 +4,11 @@
   const STORAGE_KEY = "destinyCurseHistory:v1";
   const PLAYERS_STORAGE_KEY = "destinyKnownPlayers:v1";
   const CURRENT_PLAYERS_STORAGE_KEY = "destinyCurrentPlayers:v1";
+  // Per-lobby subset of history, keyed by lobby code — { code: { name: [curseId,...] } }.
+  // Only affects what the history panel *shows* while in a lobby; the
+  // never-repeat exclusion in computeAssignment always reads the full
+  // cross-lobby history in STORAGE_KEY. See loadLobbyLog/recordLobbyDraw.
+  const LOBBY_LOG_KEY = "destinyLobbyCurseLog:v1";
 
   // When true, incoming lobby state is being applied to the UI — suppress the
   // change events we'd otherwise emit back to the lobby (which would echo).
@@ -15,6 +20,10 @@
 
   // The name this device joined a lobby as (null outside lobby mode).
   let selfPlayerName = null;
+
+  // The lobby code this device is currently in (null outside lobby mode) —
+  // when set, the history panel shows only curses drawn in this lobby.
+  let currentLobbyCode = null;
 
   function emitLocalChange() {
     if (applyingRemoteState) return;
@@ -95,6 +104,39 @@
       console.error("Kunde inte spara historik till localStorage:", err);
       setStatus("Kunde inte spara till localStorage (är den avstängd i webbläsaren?).", true);
     }
+  }
+
+  function loadLobbyLog() {
+    try {
+      const raw = localStorage.getItem(LOBBY_LOG_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (err) {
+      console.error("Kunde inte läsa lobby-historik från localStorage:", err);
+      return {};
+    }
+  }
+
+  function saveLobbyLog(log) {
+    try {
+      localStorage.setItem(LOBBY_LOG_KEY, JSON.stringify(log));
+    } catch (err) {
+      console.error("Kunde inte spara lobby-historik till localStorage:", err);
+    }
+  }
+
+  // Appends an assignment to the current lobby's slice of history — called
+  // alongside the global saveHistory() in finalizeDraw() so the history panel
+  // can show "just this lobby" while in one. No-ops outside lobby mode.
+  function recordLobbyDraw(assignment) {
+    if (!currentLobbyCode) return;
+    const log = loadLobbyLog();
+    const forLobby = log[currentLobbyCode] || {};
+    assignment.forEach(({ player, curse }) => {
+      if (!forLobby[player]) forLobby[player] = [];
+      if (!forLobby[player].includes(curse.id)) forLobby[player].push(curse.id);
+    });
+    log[currentLobbyCode] = forLobby;
+    saveLobbyLog(log);
   }
 
   function loadKnownPlayers() {
@@ -325,6 +367,7 @@
       if (!history[player].includes(curse.id)) history[player].push(curse.id);
     });
     saveHistory(history);
+    recordLobbyDraw(assignment);
     renderHistory();
     openDrawModal(assignment);
   }
@@ -567,8 +610,14 @@
     if (e.key === "Escape" && !drawModal.hidden) closeDrawModal();
   });
 
+  // Outside a lobby, shows the full cross-lobby history (STORAGE_KEY). While
+  // in a lobby, shows only that lobby's slice (LOBBY_LOG_KEY) — the
+  // never-repeat exclusion in computeAssignment still always uses the full
+  // history regardless of what's displayed here.
   function renderHistory() {
-    const history = loadHistory();
+    const history = currentLobbyCode
+      ? (loadLobbyLog()[currentLobbyCode] || {})
+      : loadHistory();
     const names = Object.keys(history).filter((n) => history[n] && history[n].length > 0);
 
     // Own name first (lobby mode), the rest keep insertion order.
@@ -582,6 +631,9 @@
 
     historyList.innerHTML = "";
     historyEmptyHint.hidden = names.length > 0;
+    historyEmptyHint.textContent = currentLobbyCode
+      ? "Inga förbannelser dragna i den här lobbyn ännu."
+      : "Ingen historik sparad ännu.";
 
     names.forEach((name) => {
       const isSelf = name === selfPlayerName;
@@ -634,6 +686,25 @@
       }
     });
     if (changed) saveHistory(history);
+
+    // Keep the current lobby's displayed slice consistent with what we just
+    // wiped from the full history — otherwise the cleared names would still
+    // show stale curses in the lobby-scoped view.
+    if (currentLobbyCode) {
+      const log = loadLobbyLog();
+      const forLobby = log[currentLobbyCode];
+      if (forLobby) {
+        let logChanged = false;
+        names.forEach((name) => {
+          if (forLobby[name]) {
+            delete forLobby[name];
+            logChanged = true;
+          }
+        });
+        if (logChanged) saveLobbyLog(log);
+      }
+    }
+
     renderHistory();
   }
 
@@ -731,6 +802,13 @@
     renderHistory();
   }
 
+  // The lobby code this device is currently in — flips the history panel
+  // between "everything ever" (null, solo mode) and "just this lobby".
+  function setLobbyCode(code) {
+    currentLobbyCode = code || null;
+    renderHistory();
+  }
+
   let resolveReady;
   const readyPromise = new Promise((resolve) => { resolveReady = resolve; });
 
@@ -740,6 +818,7 @@
     applyRemoteState,
     setLobbyRole,
     setSelfName,
+    setLobbyCode,
     showRemoteDraw,
     clearFireteam,
     requestClearHistoryFor,
