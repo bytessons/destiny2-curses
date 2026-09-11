@@ -409,7 +409,20 @@
     (tierUps || []).forEach(({ player, newTier }) => setPlayerTier(player, newTier));
     renderPlayers();
     renderHistory();
-    openDrawModal(assignment);
+    openDrawModal(revealFor(assignment));
+  }
+
+  // In a lobby, every device gets the FULL assignment (finalizeDraw needs it
+  // to write everyone's history), but each player should only ever reveal
+  // their own card(s) — no reason to click through teammates' curses, and it
+  // sidesteps "host's Nästa doesn't advance guests' screens" entirely since
+  // nobody needs to watch anyone else's step. Outside a lobby (selfPlayerName
+  // is null, solo/shared-screen mode) the whole team's cards still reveal in
+  // sequence, one at a time, as before.
+  function revealFor(assignment) {
+    if (!selfPlayerName) return assignment;
+    const mine = assignment.filter((entry) => entry.player === selfPlayerName);
+    return mine.length > 0 ? mine : assignment;
   }
 
   // Rebuilds an assignment from the compact { player, curseId } form stored in
