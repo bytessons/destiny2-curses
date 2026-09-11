@@ -122,6 +122,22 @@ main {
   border-top: 1px solid var(--panel-line);
 }
 
+/* #fireteam-section/#encounter-section wrap their own <h2>, so it's always
+   ":first-child" of its own wrapper — style the divider off the wrapper's
+   position instead, and drop it when the section above is hidden (lobby
+   mode hides #fireteam-section, so #encounter-section becomes the first
+   thing shown and shouldn't have a leading divider). */
+#setup-panel > #encounter-section > h2 {
+  margin-top: 1.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--panel-line);
+}
+#fireteam-section[hidden] + #encounter-section > h2 {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
 /* Player input */
 .player-form {
   display: flex;
@@ -697,15 +713,46 @@ main {
   padding-left: 0.28em;
 }
 
-/* In a lobby the roster is self-service (players add themselves by joining),
-   so nobody edits it from the setup panel. Guests also can't touch type/tier. */
-#setup-panel.is-lobby-host .chip-remove,
-#setup-panel.is-lobby-guest .chip-remove,
-#setup-panel.is-lobby-guest .segmented {
-  pointer-events: none;
-  opacity: 0.5;
-}
+/* In a lobby, #fireteam-section/#encounter-section are hidden outright by
+   script.js (setLobbyRole) rather than just disabled — the lobby panel's
+   roster list is the source of truth. A crimson accent still marks a guest's
+   setup panel as "watching only". */
 #setup-panel.is-lobby-guest::after { border-color: var(--crimson); }
+
+.lobby-roster-block { margin-bottom: 1.1rem; }
+
+.lobby-roster-list {
+  margin-top: 0.4rem;
+}
+.lobby-roster-list li { padding: 0.35rem 0.7rem; font-size: 0.88rem; }
+
+/* Join toasts */
+.toast-stack {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: min(320px, calc(100vw - 2rem));
+}
+
+.toast {
+  background: var(--panel);
+  border: 1px solid var(--amber);
+  color: var(--bone);
+  padding: 0.65rem 0.9rem;
+  font-size: 0.88rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
 
 .btn:disabled {
   opacity: 0.5;

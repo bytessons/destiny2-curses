@@ -6,7 +6,7 @@ raid- eller dungeon-encounter. Ren HTML/CSS/JS, ingen build-process, inget backe
 ## Använda det
 
 1. Lägg till spelarnamn.
-2. Välj Raid/Dungeon och tier.
+2. Välj tier.
 3. Klicka "Dra förbannelser" — varje spelare får en unik förbannelse ur poolen,
    ingen får en de redan haft, och ingen förbannelse delas ut till två spelare
    i samma dragning.
@@ -28,7 +28,8 @@ Alla förbannelser bor i `curses.json`. Varje objekt:
 }
 ```
 
-- `type` kan vara `"raid"`, `"dungeon"` eller `"both"` (gäller för bägge).
+- `type` är ett legacy-fält (används inte längre — alla förbannelser gäller
+  oavsett aktivitet) och kan uteslutas för nya curses.
 - `id` måste vara stabilt — ändra det inte i efterhand, då tappar historiken
   kopplingen till redan utdelade curses.
 
@@ -53,11 +54,14 @@ förändras.
 **Så funkar det:**
 
 - Alla anger ett **spelarnamn**. Den som klickar "Skapa lobby" blir **värd** och
-  styr typ, tier och dragningen.
+  styr tier och dragningen.
 - Övriga skriver in namn + den 6 tecken långa koden och läggs då till i
   fireteamet automatiskt. Deras setup-UI är låst; de ser värdens val och
   dragningen i realtid.
 - I historiken hamnar din egen rad överst, märkt "(du)".
+- Om du laddar om sidan eller öppnar den i en ny flik ansluter du automatiskt
+  till den senaste lobbyn igen (kod + namn sparas lokalt). "Lämna lobby"
+  rensar det sparade läget och fireteam-listan helt.
 - Historik sparas fortfarande lokalt per webbläsare (`localStorage`) — lobbyn delar
   bara den aktuella dragningen, inte historiken.
 - Värden stänger lobbyn när hen lämnar. Gäster som lämnar tas bara bort ur rostern.

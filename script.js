@@ -19,7 +19,7 @@
   function emitLocalChange() {
     if (applyingRemoteState) return;
     document.dispatchEvent(new CustomEvent("curse:localchange", {
-      detail: { players: players.slice(), type: selectedType, tier: selectedTier },
+      detail: { players: players.slice(), tier: selectedTier },
     }));
   }
 
@@ -32,7 +32,6 @@
   /** @type {string[]} */
   let knownPlayers = [];
 
-  let selectedType = "raid";
   let selectedTier = 1;
 
   /** @type {Array<{player:string,curse:object}>} */
@@ -54,7 +53,6 @@
   const knownPlayerListEl = document.getElementById("known-player-list");
   const knownPlayerEmptyHint = document.getElementById("known-player-empty-hint");
 
-  const typeSegmented = document.getElementById("type-segmented");
   const tierSegmented = document.getElementById("tier-segmented");
 
   const drawBtn = document.getElementById("draw-btn");
@@ -72,8 +70,12 @@
   const clearHistoryBtn = document.getElementById("clear-history-btn");
 
   const confirmOverlay = document.getElementById("confirm-overlay");
+  const confirmMessageEl = document.getElementById("confirm-message");
   const confirmCancel = document.getElementById("confirm-cancel");
   const confirmClear = document.getElementById("confirm-clear");
+
+  const fireteamSection = document.getElementById("fireteam-section");
+  const encounterSection = document.getElementById("encounter-section");
 
   // ---------- Storage ----------
   function loadHistory() {
@@ -164,6 +166,15 @@
     playerEmptyHint.hidden = players.length > 0;
   }
 
+  // Called when leaving/losing a lobby — the fireteam list up to that point
+  // was the lobby's roster (mirrored via applyRemoteState), not this device's
+  // own local fireteam, so it shouldn't linger after the lobby is gone.
+  function clearFireteam() {
+    players = [];
+    saveCurrentPlayers();
+    renderPlayers();
+  }
+
   function addPlayerToFireteam(name) {
     if (players.some((p) => p.toLowerCase() === name.toLowerCase())) {
       setStatus("\"" + name + "\" finns redan i fireteamet.", true);
@@ -249,7 +260,6 @@
     });
   }
 
-  wireSegmented(typeSegmented, (value) => { selectedType = value; emitLocalChange(); });
   wireSegmented(tierSegmented, (value) => { selectedTier = Number(value); emitLocalChange(); });
 
   // Reflects a segmented control's active button without firing its onSelect —
@@ -262,11 +272,7 @@
 
   // ---------- Draw logic ----------
   function getEligiblePool() {
-    return ALL_CURSES.filter((curse) => {
-      const matchesTier = curse.tier === selectedTier;
-      const matchesType = curse.type === selectedType || curse.type === "both";
-      return matchesTier && matchesType;
-    });
+    return ALL_CURSES.filter((curse) => curse.tier === selectedTier);
   }
 
   // Runs the whole draw: validates, builds an assignment, and returns either
@@ -289,8 +295,8 @@
       return {
         error:
           playersOutOfCurses.join(", ") +
-          " har redan fått alla tier " + toRoman(selectedTier) + " (" + typeLabel(selectedType) +
-          ") förbannelser som finns. Rensa historik för " +
+          " har redan fått alla tier " + toRoman(selectedTier) +
+          " förbannelser som finns. Rensa historik för " +
           (playersOutOfCurses.length === 1 ? "den spelaren" : "de spelarna") +
           " eller lägg till fler curses i curses.json.",
       };
@@ -302,7 +308,7 @@
       return {
         error:
           "Kunde inte hitta en fördelning där ingen förbannelse delas ut till två spelare i " +
-          "samma dragning för tier " + toRoman(selectedTier) + " (" + typeLabel(selectedType) + "). " +
+          "samma dragning för tier " + toRoman(selectedTier) + ". " +
           "Rensa historik eller lägg till fler curses i curses.json.",
       };
     }
@@ -414,10 +420,6 @@
 
   function toRoman(n) {
     return { 1: "I", 2: "II", 3: "III", 4: "IV" }[n] || String(n);
-  }
-
-  function typeLabel(t) {
-    return { raid: "Raid", dungeon: "Dungeon", both: "Bägge" }[t] || t;
   }
 
   // ---------- Rendering ----------
@@ -611,17 +613,64 @@
   }
 
   // ---------- Clear history ----------
-  clearHistoryBtn.addEventListener("click", () => {
+  // A single confirm overlay is reused for both "clear everything" and the
+  // lobby's "clear history for these names" action — whichever one opened it
+  // sets the message and the action to run on confirm.
+  let pendingConfirmAction = null;
+
+  function openConfirm(message, action) {
+    confirmMessageEl.textContent = message;
+    pendingConfirmAction = action;
     confirmOverlay.hidden = false;
+  }
+
+  function clearHistoryForNames(names) {
+    const history = loadHistory();
+    let changed = false;
+    names.forEach((name) => {
+      if (history[name]) {
+        delete history[name];
+        changed = true;
+      }
+    });
+    if (changed) saveHistory(history);
+    renderHistory();
+  }
+
+  // Exposed to the lobby: lets the host (or a guest) wipe local history for
+  // everyone currently in the lobby roster, without touching history for
+  // players from other lobbies/sessions on this same browser.
+  function requestClearHistoryFor(names) {
+    const relevant = (names || []).filter((name) => loadHistory()[name]);
+    if (relevant.length === 0) {
+      setStatus("Ingen sparad historik att rensa för spelarna i lobbyn.");
+      return;
+    }
+    openConfirm(
+      "Rensa sparad historik för " + relevant.join(", ") + "? Detta kan inte ångras.",
+      () => {
+        clearHistoryForNames(relevant);
+        setStatus("Historik rensad för " + relevant.join(", ") + ".");
+      }
+    );
+  }
+
+  clearHistoryBtn.addEventListener("click", () => {
+    openConfirm("Rensa all sparad historik? Detta kan inte ångras.", () => {
+      localStorage.removeItem(STORAGE_KEY);
+      setStatus("Historiken är rensad.");
+      renderHistory();
+    });
   });
   confirmCancel.addEventListener("click", () => {
     confirmOverlay.hidden = true;
+    pendingConfirmAction = null;
   });
   confirmClear.addEventListener("click", () => {
-    localStorage.removeItem(STORAGE_KEY);
     confirmOverlay.hidden = true;
-    setStatus("Historiken är rensad.");
-    renderHistory();
+    const action = pendingConfirmAction;
+    pendingConfirmAction = null;
+    if (action) action();
   });
 
   drawBtn.addEventListener("click", drawForFireteam);
@@ -642,10 +691,6 @@
         saveCurrentPlayers();
         renderPlayers();
       }
-      if (state.type === "raid" || state.type === "dungeon") {
-        selectedType = state.type;
-        setSegmentedValue(typeSegmented, state.type);
-      }
       if (state.tier >= 1 && state.tier <= 4) {
         selectedTier = Number(state.tier);
         setSegmentedValue(tierSegmented, state.tier);
@@ -657,16 +702,22 @@
 
   // Lobby roles:
   //   null    — not in a lobby, everything editable (local mode)
-  //   "host"  — owns type/tier/draw; the roster is self-service (guests add
-  //             themselves), so the "add player" UI is locked
-  //   "guest" — watches only; the whole setup panel and the draw are locked
+  //   "host"  — owns tier/draw; the roster is self-service (guests add
+  //             themselves), so the fireteam section is hidden entirely —
+  //             the lobby panel's roster list is the source of truth
+  //   "guest" — watches only; fireteam AND tier are hidden, leaving just the
+  //             (disabled) draw button as a status line
   function setLobbyRole(role) {
     const isGuest = role === "guest";
     const isHost = role === "host";
+    const inLobby = isGuest || isHost;
     lockedByLobby = isGuest;
 
     setupPanel.classList.toggle("is-lobby-guest", isGuest);
     setupPanel.classList.toggle("is-lobby-host", isHost);
+
+    if (fireteamSection) fireteamSection.hidden = inLobby;
+    if (encounterSection) encounterSection.hidden = isGuest;
 
     openPlayerSidebarBtn.disabled = isGuest || isHost;
     drawBtn.disabled = isGuest;
@@ -685,11 +736,13 @@
 
   window.CurseApp = {
     ready: readyPromise,
-    getState: () => ({ players: players.slice(), type: selectedType, tier: selectedTier }),
+    getState: () => ({ players: players.slice(), tier: selectedTier }),
     applyRemoteState,
     setLobbyRole,
     setSelfName,
     showRemoteDraw,
+    clearFireteam,
+    requestClearHistoryFor,
   };
 
   // ---------- Boot ----------

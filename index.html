@@ -25,7 +25,7 @@
       <div id="lobby-idle" hidden>
         <p class="lobby-hint">
           Kör solo lokalt, eller skapa en lobby så flera enheter ser samma
-          dragning. Skapar du lobbyn styr du typ, tier och dragningen — spelarna
+          dragning. Skapar du lobbyn styr du tier och dragningen — spelarna
           lägger till sig själva genom att gå med.
         </p>
         <label class="lobby-name-field">
@@ -48,8 +48,17 @@
           <button type="button" id="lobby-copy-btn" class="btn btn-ghost">Kopiera</button>
         </p>
         <p class="lobby-hint" id="lobby-role"></p>
-        <p class="lobby-hint" id="lobby-roster"></p>
-        <button type="button" id="lobby-leave-btn" class="btn btn-danger-ghost">Lämna lobby</button>
+
+        <div class="lobby-roster-block">
+          <span class="field-label">Spelare i lobbyn</span>
+          <ul id="lobby-roster-list" class="chip-list lobby-roster-list"></ul>
+          <p class="empty-hint" id="lobby-roster-empty-hint">Väntar på att spelare går med…</p>
+        </div>
+
+        <div class="lobby-actions">
+          <button type="button" id="lobby-leave-btn" class="btn btn-danger-ghost">Lämna lobby</button>
+          <button type="button" id="lobby-clear-history-btn" class="btn btn-danger-ghost">Rensa historik för lobbyn</button>
+        </div>
       </div>
 
       <p class="status-msg" id="lobby-status" role="status"></p>
@@ -59,26 +68,23 @@
 
       <!-- SETUP -->
       <section class="panel" id="setup-panel">
-        <h2>1. Fireteam</h2>
-        <button type="button" id="open-player-sidebar-btn" class="btn btn-ghost">+ Lägg till spelare</button>
-        <ul id="player-list" class="chip-list" aria-label="Spelare i fireteamet"></ul>
-        <p class="empty-hint" id="player-empty-hint">Inga spelare tillagda ännu.</p>
+        <div id="fireteam-section">
+          <h2>Fireteam</h2>
+          <button type="button" id="open-player-sidebar-btn" class="btn btn-ghost">+ Lägg till spelare</button>
+          <ul id="player-list" class="chip-list" aria-label="Spelare i fireteamet"></ul>
+          <p class="empty-hint" id="player-empty-hint">Inga spelare tillagda ännu.</p>
+        </div>
 
-        <h2>2. Encounter</h2>
-        <div class="field-row">
-          <div class="field">
-            <span class="field-label">Typ</span>
-            <div class="segmented" id="type-segmented">
-              <button type="button" class="seg-btn is-active" data-value="raid">Raid</button>
-              <button type="button" class="seg-btn" data-value="dungeon">Dungeon</button>
-            </div>
-          </div>
-          <div class="field">
-            <span class="field-label">Tier</span>
-            <div class="segmented" id="tier-segmented">
-              <button type="button" class="seg-btn is-active" data-value="1">I</button>
-              <button type="button" class="seg-btn" data-value="2">II</button>
-              <button type="button" class="seg-btn" data-value="3">III</button>
+        <div id="encounter-section">
+          <h2>Encounter</h2>
+          <div class="field-row">
+            <div class="field">
+              <span class="field-label">Tier</span>
+              <div class="segmented" id="tier-segmented">
+                <button type="button" class="seg-btn is-active" data-value="1">I</button>
+                <button type="button" class="seg-btn" data-value="2">II</button>
+                <button type="button" class="seg-btn" data-value="3">III</button>
+              </div>
             </div>
           </div>
         </div>
@@ -139,13 +145,15 @@
 
   <div class="confirm-overlay" id="confirm-overlay" hidden>
     <div class="confirm-box">
-      <p>Rensa all sparad historik? Detta kan inte ångras.</p>
+      <p id="confirm-message">Rensa all sparad historik? Detta kan inte ångras.</p>
       <div class="confirm-actions">
         <button class="btn btn-ghost" id="confirm-cancel">Avbryt</button>
-        <button class="btn btn-danger" id="confirm-clear">Rensa allt</button>
+        <button class="btn btn-danger" id="confirm-clear">Rensa</button>
       </div>
     </div>
   </div>
+
+  <div class="toast-stack" id="toast-stack" aria-live="polite" aria-atomic="false"></div>
 
   <script src="script.js"></script>
   <script type="module" src="lobby.js"></script>

@@ -41,10 +41,9 @@ service cloud.firestore {
     }
 
     function isValidShape(d) {
-      return d.keys().hasOnly(['createdAt', 'updatedAt', 'hostId', 'type', 'tier', 'players', 'draw'])
-        && d.keys().hasAll(['createdAt', 'updatedAt', 'hostId', 'type', 'tier', 'players'])
+      return d.keys().hasOnly(['createdAt', 'updatedAt', 'hostId', 'tier', 'players', 'draw'])
+        && d.keys().hasAll(['createdAt', 'updatedAt', 'hostId', 'tier', 'players'])
         && d.hostId is string && d.hostId.size() >= 8 && d.hostId.size() <= 64
-        && d.type in ['raid', 'dungeon']
         && d.tier is int && d.tier >= 1 && d.tier <= 4
         && d.players is list && d.players.size() <= 12
         && (!('draw' in d.keys()) || d.draw == null || isValidDraw(d.draw));

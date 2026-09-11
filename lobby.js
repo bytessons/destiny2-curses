@@ -4,7 +4,7 @@
 // och två DOM-events ("curse:localchange", "curse:localdraw"). Finns ingen ifylld
 // firebase-config.js gör den här filen ingenting — appen kör vidare lokalt.
 //
-// Rollmodell (se CLAUDE.md): den som skapar lobbyn är VÄRD och styr typ, tier
+// Rollmodell (se CLAUDE.md): den som skapar lobbyn är VÄRD och styr tier
 // och dragningen. Alla — värd som gäster — går med under ett spelarnamn och blir
 // då en spelare i fireteamet (`players` i lobbydokumentet). Gästernas setup-UI
 // är låst; de speglar värdens val och ser dragningen live. Värden ser rostern
@@ -14,6 +14,7 @@ import { firebaseConfig, recaptchaV3SiteKey } from "./firebase-config.js";
 
 const SDK = "https://www.gstatic.com/firebasejs/10.13.2";
 const CLIENT_ID_KEY = "destinyLobbyClientId:v1";
+const LAST_LOBBY_KEY = "destinyLastLobby:v1";
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // inga lättförväxlade tecken
 const CODE_LENGTH = 6;
 const SETUP_DEBOUNCE_MS = 400;
@@ -63,9 +64,12 @@ async function boot() {
     codeValue: document.getElementById("lobby-code-value"),
     copyBtn: document.getElementById("lobby-copy-btn"),
     role: document.getElementById("lobby-role"),
-    roster: document.getElementById("lobby-roster"),
+    rosterList: document.getElementById("lobby-roster-list"),
+    rosterEmptyHint: document.getElementById("lobby-roster-empty-hint"),
     leaveBtn: document.getElementById("lobby-leave-btn"),
+    clearHistoryBtn: document.getElementById("lobby-clear-history-btn"),
     status: document.getElementById("lobby-status"),
+    toastStack: document.getElementById("toast-stack"),
   };
   // Avslöja lobbypanelen först nu när vi vet att Firebase är konfigurerat.
   if (el.panel) el.panel.hidden = false;
@@ -77,6 +81,7 @@ async function boot() {
   let myName = null; // spelarnamnet vi gick med som
   let unsub = null;
   let roster = []; // senast kända players[] från lobbydokumentet
+  let previousRoster = null; // null = "väntar på första snapshotten", undviker en falsk join-toast för alla som redan var med
   let lastSeenDrawnAt = 0;
   let ignoreNextDrawnAt = 0; // dragningen vi själva just publicerade
   let setupTimer = null;
@@ -98,14 +103,37 @@ async function boot() {
     if (inLobby && el.codeValue) el.codeValue.textContent = code;
     if (el.role) {
       el.role.textContent = isHost
-        ? "Du är värd — du styr typ, tier och dragningen."
+        ? "Du är värd — du styr tier och dragningen."
         : "Du är gäst — värden styr setup. Du ser dragningen live.";
     }
-    if (el.roster) {
-      el.roster.textContent = roster.length
-        ? "I lobbyn: " + roster.join(", ")
-        : "Väntar på att spelare går med…";
-    }
+    renderRoster();
+  }
+
+  function renderRoster() {
+    if (!el.rosterList) return;
+    el.rosterList.innerHTML = "";
+    roster.forEach((name) => {
+      const li = document.createElement("li");
+      const span = document.createElement("span");
+      span.textContent = name === myName ? name + " (du)" : name;
+      li.appendChild(span);
+      el.rosterList.appendChild(li);
+    });
+    if (el.rosterEmptyHint) el.rosterEmptyHint.hidden = roster.length > 0;
+  }
+
+  // ---------- Toasts (join-notiser i hörnet) ----------
+  function showToast(message) {
+    if (!el.toastStack) return;
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    toast.textContent = message;
+    el.toastStack.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add("is-visible"));
+    setTimeout(() => {
+      toast.classList.remove("is-visible");
+      setTimeout(() => toast.remove(), 300);
+    }, 3200);
   }
 
   function readName() {
@@ -131,7 +159,6 @@ async function boot() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         hostId: clientId,
-        type: state.type,
         tier: state.tier,
         players: [name],
         draw: null,
@@ -185,9 +212,11 @@ async function boot() {
     myName = name;
     lastSeenDrawnAt = 0; // så att en redan gjord dragning visas när man kommer in
     ignoreNextDrawnAt = 0;
+    previousRoster = null; // undvik join-toasts för folk som redan var med när vi kom in
     subscribe();
     window.CurseApp.setLobbyRole(host ? "host" : "guest");
     window.CurseApp.setSelfName(name);
+    saveLastLobby(newCode, name);
     renderPanel();
   }
 
@@ -198,8 +227,13 @@ async function boot() {
     isHost = false;
     myName = null;
     roster = [];
+    previousRoster = null;
     window.CurseApp.setLobbyRole(null);
     window.CurseApp.setSelfName(null);
+    window.CurseApp.clearFireteam();
+    if (el.codeInput) el.codeInput.value = "";
+    if (el.nameInput) el.nameInput.value = "";
+    clearLastLobby();
     renderPanel();
     if (message) setStatus(message, true);
   }
@@ -242,12 +276,21 @@ async function boot() {
   function applyDoc(data) {
     roster = Array.isArray(data.players) ? data.players.slice() : [];
 
+    // Toasta bara nya namn sedan förra snapshotten (inte första gången vi
+    // öppnar lobbyn — då är hela rostern "ny" men ingen har egentligen gått
+    // med just nu), och aldrig för oss själva.
+    if (previousRoster !== null) {
+      const newcomers = roster.filter((name) => !previousRoster.includes(name) && name !== myName);
+      newcomers.forEach((name) => showToast(name + " gick med i lobbyn"));
+    }
+    previousRoster = roster.slice();
+
     // Alla speglar rostern (för att se vilka som är med). Gäster speglar även
-    // typ/tier. Värden äger typ/tier och rör dem inte här.
+    // tier. Värden äger tier och rör den inte här.
     if (isHost) {
       window.CurseApp.applyRemoteState({ players: roster });
     } else {
-      window.CurseApp.applyRemoteState({ players: roster, type: data.type, tier: data.tier });
+      window.CurseApp.applyRemoteState({ players: roster, tier: data.tier });
     }
     renderPanel();
 
@@ -261,7 +304,7 @@ async function boot() {
   }
 
   // ---------- App -> Firestore (bara värden) ----------
-  // Värden synkar bara typ och tier. Rostern (`players`) sköts av spelarna
+  // Värden synkar bara tier. Rostern (`players`) sköts av spelarna
   // själva via arrayUnion/arrayRemove när de går med/lämnar.
   document.addEventListener("curse:localchange", (e) => {
     if (!code || !isHost) return;
@@ -270,7 +313,6 @@ async function boot() {
     setupTimer = setTimeout(() => {
       setupTimer = null;
       updateDoc(lobbyRef(code), {
-        type: state.type,
         tier: state.tier,
         updatedAt: serverTimestamp(),
       }).catch((err) => {
@@ -324,8 +366,45 @@ async function boot() {
   if (el.leaveBtn) {
     el.leaveBtn.addEventListener("click", leaveLobby);
   }
+  if (el.clearHistoryBtn) {
+    el.clearHistoryBtn.addEventListener("click", () => {
+      window.CurseApp.requestClearHistoryFor(roster);
+    });
+  }
+
+  // ---------- Återanslutning ----------
+  // Försöker automatiskt gå med i den senast aktiva lobbyn (samma flik, ny
+  // flik eller efter en omladdning) — sparas i localStorage varje gång vi
+  // går med i eller skapar en lobby, och rensas när vi lämnar/lobbyn stängs.
+  async function tryReconnect() {
+    const last = readLastLobby();
+    if (!last || !last.code || !last.name) return;
+    if (el.nameInput) el.nameInput.value = last.name;
+
+    setStatus("Ansluter till senaste lobbyn " + last.code + "…");
+    try {
+      const snap = await getDoc(lobbyRef(last.code));
+      if (!snap.exists()) {
+        clearLastLobby();
+        setStatus("");
+        return;
+      }
+      const host = snap.data().hostId === clientId;
+      enterLobby(last.code, host, last.name);
+      applyDoc(snap.data());
+      await updateDoc(lobbyRef(last.code), {
+        players: arrayUnion(last.name),
+        updatedAt: serverTimestamp(),
+      });
+      setStatus("Återanslöt till " + last.code + " som " + last.name + ".");
+    } catch (err) {
+      console.error("[lobby] Automatisk återanslutning misslyckades:", err);
+      setStatus("Kunde inte återansluta automatiskt till " + last.code + ".", true);
+    }
+  }
 
   await window.CurseApp.ready;
+  await tryReconnect();
   renderPanel();
 }
 
@@ -340,6 +419,31 @@ function getClientId() {
     return id;
   } catch {
     return "c-" + cryptoRandom(20);
+  }
+}
+
+function saveLastLobby(code, name) {
+  try {
+    localStorage.setItem(LAST_LOBBY_KEY, JSON.stringify({ code, name }));
+  } catch {
+    // localStorage otillgängligt — återanslutning stängs bara av, ofarligt.
+  }
+}
+
+function readLastLobby() {
+  try {
+    const raw = localStorage.getItem(LAST_LOBBY_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearLastLobby() {
+  try {
+    localStorage.removeItem(LAST_LOBBY_KEY);
+  } catch {
+    // ofarligt att misslyckas här
   }
 }
 
