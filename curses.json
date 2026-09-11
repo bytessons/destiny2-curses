@@ -136,6 +136,30 @@
     "type": "both"
   },
   {
+    "id": "flimsy-aim-tier1",
+    "name": "Flimsy Aim",
+    "description": "For the next encounter, set your look and ADS sensitivity to the highest possible value.",
+    "imageURL": "cards/tier1/FLIMSY_AIM.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "near-sighted-tier1",
+    "name": "Near Sighted",
+    "description": "For the next encounter, set your field of view to the lowest possible value.",
+    "imageURL": "cards/tier1/NEAR_SIGHTED.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
+    "id": "the-chosen-tier1",
+    "name": "The Chosen",
+    "description": "For the next encounter, if you die, the fireteam must wipe.",
+    "imageURL": "cards/tier1/THE_CHOSEN.png",
+    "tier": 1,
+    "type": "both"
+  },
+  {
     "id": "arsenal-swap-tier2",
     "name": "Arsenal Swap",
     "description": "You must swap all currently equipped weapons and never use it again",
@@ -288,6 +312,38 @@
     "type": "both"
   },
   {
+    "id": "back-it-up-tier2",
+    "name": "Back It Up",
+    "description": "You must make the next traversal section backwards.",
+    "imageURL": "cards/tier2/BACK_IT_UP.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "muted-tier2",
+    "name": "Muted",
+    "description": "For the next encounter you cannot communicate in any way.",
+    "imageURL": "cards/tier2/MUTED.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "steady-aim-tier2",
+    "name": "Steady Aim",
+    "description": "For the next encounter, set your look and ADS sensitivity to the lowest possible value.",
+    "imageURL": "cards/tier2/STEADY_AIM.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
+    "id": "the-chosen-ii-tier2",
+    "name": "The Chosen II",
+    "description": "From now on, if you die, the fireteam must wipe.",
+    "imageURL": "cards/tier2/THE_CHOSEN_TIER_2.png",
+    "tier": 2,
+    "type": "both"
+  },
+  {
     "id": "equipment-locked-tier3",
     "name": "Equipment Locked",
     "description": "You may no longer change anything in your loadout unless specified by another card",
@@ -372,6 +428,22 @@
     "name": "White Stallion",
     "description": "Equip two white weapons (common)",
     "imageURL": "cards/tier3/WHITE STALLION.png",
+    "tier": 3,
+    "type": "both"
+  },
+  {
+    "id": "deafened-tier3",
+    "name": "Deafened",
+    "description": "For the next encounter you must mute communications and shut off game chat.",
+    "imageURL": "cards/tier3/DEAFENED.png",
+    "tier": 3,
+    "type": "both"
+  },
+  {
+    "id": "lead-shoes-tier3",
+    "name": "Lead Shoes",
+    "description": "For the next encounter, choose a spot before the encounter starts and remain there during the encounter. (If teleported, return to your spot as quick as possible).",
+    "imageURL": "cards/tier3/LEAD_SHOES.png",
     "tier": 3,
     "type": "both"
   }
